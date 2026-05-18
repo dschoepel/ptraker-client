@@ -6,10 +6,11 @@ React frontend for **portfolioTraker** — a personal investment portfolio track
 
 ptraker-client is a React + Vite + Ant Design v6 single-page application that:
 
-- Authenticates users via the ptraker-api (Supabase Auth JWT)
+- Authenticates users via Supabase Auth JWT
 - Displays a consolidated portfolio dashboard with live Yahoo Finance prices
 - Shows net worth summary, per-account breakdowns, and position-level detail
-- Supports CSV/QFX file import for position data from multiple institutions
+- Supports CSV/QFX file import with sync-delete for removed positions
+- Watchlist with 30-day sparkline charts and symbol search
 - Works on desktop and mobile (iPhone)
 
 ## Tech Stack
@@ -20,6 +21,7 @@ ptraker-client is a React + Vite + Ant Design v6 single-page application that:
 | UI Library | Ant Design v6 |
 | Routing | React Router v7 |
 | HTTP | Axios |
+| Charts | Recharts |
 | Auth (direct) | @supabase/supabase-js |
 
 ## Prerequisites
@@ -50,31 +52,32 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ```bash
 npm run dev     # development — http://localhost:5173
 npm run build   # production build → dist/
-npm run preview # preview production build locally
+npm run preview # preview production build
 ```
 
 ## Features
 
 - Dark/light mode based on system preference
-- Brand colors from portfolioTraker logo (gold `#f5a623` on dark `#1a1d23`)
+- Brand colors: gold `#f5a623` on dark `#1a1d23`
 - Responsive — desktop sidebar, mobile bottom tab bar
-- Dashboard with collapsible account sections
-- Last import timestamp per account with freshness indicator
-- Real-time price refresh with live UI update
-- Color-coded gain/loss (green/red)
+- Dashboard with collapsible account sections and last import timestamp
+- Real-time price refresh
+- Color-coded gain/loss
 - Full account management (create, edit, deactivate, delete)
-- 3-step import wizard with history log
-- Password reset via email flow
+- 3-step import wizard with sync-delete and watchlist integration
+- Watchlist with 30-day sparkline charts and Yahoo Finance symbol search
+- Password reset via email
 
 ## Pages
 
 | Page | Path | Description |
 |---|---|---|
 | Login | `/login` | Email/password sign in |
-| Reset Password | `/reset-password` | Set new password from email link |
+| Reset Password | `/reset-password` | Set new password |
 | Dashboard | `/dashboard` | Portfolio overview |
 | Accounts | `/accounts` | Manage financial accounts |
-| Import | `/import` | Import CSV/QFX position files |
+| Import | `/import` | Import CSV/QFX files |
+| Watchlist | `/watchlist` | Track securities of interest |
 
 ## Production Deployment
 
@@ -82,8 +85,8 @@ npm run preview # preview production build locally
 npm run build
 ```
 
-Copy `dist/` to your web server. Served as static files — no Node.js needed.
-On Jupiter VPS, served via Swag/Nginx for `ptraker.com`.
+Copy `dist/` to your web server. Static files — no Node.js needed.
+Served via Swag/Nginx on Jupiter VPS for `ptraker.com`.
 
 ## Related
 
