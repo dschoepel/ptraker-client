@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
   Steps, Card, Select, Button, Upload, Typography, Alert,
-  Table, Tag, Space, Divider, App as AntdApp, Spin, Checkbox, Tooltip
+  Table, Tag, Space, Divider, App as AntdApp, Spin, Checkbox,
+  Tooltip, Form, Input, InputNumber
 } from 'antd';
 import {
   UploadOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  WarningOutlined, InboxOutlined, ReloadOutlined, StarOutlined
+  WarningOutlined, InboxOutlined, ReloadOutlined, StarOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import { importService, accountService, watchlistService } from '../services/dashboard.service';
 import { formatCurrency, formatPercent, formatDate, institutionName, gainLossColor } from '../utils/formatters';
@@ -16,9 +18,8 @@ const { Option } = Select;
 const { Dragger } = Upload;
 
 // =============================================================================
-// Import Page — 3-step wizard
+// Import History table columns
 // =============================================================================
-
 const historyColumns = [
   {
     title: 'File',
@@ -86,11 +87,11 @@ const historyColumns = [
 const StepSelectInstitution = ({ importers, selectedImporter, onSelect, onNext }) => (
   <div style={{ maxWidth: 500 }}>
     <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 16 }}>
-      Select the institution you are importing from.
+      Select the institution or entry method.
     </Text>
 
     <Select
-      placeholder="Select institution / file format"
+      placeholder="Select institution / entry method"
       value={selectedImporter}
       onChange={onSelect}
       size="large"
@@ -100,9 +101,11 @@ const StepSelectInstitution = ({ importers, selectedImporter, onSelect, onNext }
         <Option key={imp.id} value={imp.id}>
           <Space>
             <Text style={{ color: '#fff' }}>{imp.name}</Text>
-            <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
-              ({imp.accepts.join(', ').toUpperCase()})
-            </Text>
+            {!imp.isManual && (
+              <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+                ({imp.accepts.join(', ').toUpperCase()})
+              </Text>
+            )}
           </Space>
         </Option>
       ))}
@@ -127,13 +130,13 @@ const StepSelectInstitution = ({ importers, selectedImporter, onSelect, onNext }
       onClick={onNext}
       style={{ fontWeight: 600 }}
     >
-      Next: Select Account
+      Next
     </Button>
   </div>
 );
 
 // =============================================================================
-// Step 2 — Select Account + Upload File
+// Step 2a — File Upload (for file-based importers)
 // =============================================================================
 const StepUploadFile = ({
   accounts, selectedAccount, onSelectAccount,
@@ -180,8 +183,7 @@ const StepUploadFile = ({
           style={{ marginTop: 8 }}
           message={
             <Text style={{ fontSize: 12 }}>
-              All positions in this file will be imported into the selected account,
-              overriding auto-matching.
+              All positions will be imported into the selected account.
             </Text>
           }
         />
@@ -204,14 +206,12 @@ const StepUploadFile = ({
           <InboxOutlined style={{ fontSize: 36, color: brandColors.gold }} />
         </p>
         <p style={{ color: '#fff', fontSize: 14, margin: '0 0 4px' }}>Click or drag file here</p>
-        <p style={{ color: brandColors.textMuted, fontSize: 12, margin: 0 }}>
-          Accepted: CSV, QFX, OFX
-        </p>
+        <p style={{ color: brandColors.textMuted, fontSize: 12, margin: 0 }}>CSV, QFX, OFX</p>
       </Dragger>
     </div>
 
     <div style={{ marginBottom: 24 }}>
-      <Tooltip title="Removes positions from the database that are no longer in the exported file. Useful when you've sold a position. You'll have the option to add removed positions to your watchlist.">
+      <Tooltip title="Removes positions from the database that are no longer in the exported file.">
         <Checkbox
           checked={syncMode}
           onChange={e => onSyncModeChange(e.target.checked)}
@@ -243,7 +243,95 @@ const StepUploadFile = ({
 );
 
 // =============================================================================
-// Removed Positions — shown in results when sync-delete ran
+// Step 2b — Manual Entry (for cash/bank accounts with no recent transactions)
+// =============================================================================
+const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
+  const [form] = Form.useForm();
+
+    const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+      await onSave(values);
+    } catch {
+      // validation shown inline
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: 480 }}>
+      <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 20 }}>
+        Enter the current balance for a cash or bank account.
+        Use this when there are no recent transactions to export.
+      </Text>
+
+      <Form form={form} layout="vertical" requiredMark={false}>
+        <Form.Item
+          name="accountId"
+          label="Account"
+          rules={[{ required: true, message: 'Select an account' }]}
+        >
+          <Select
+            placeholder="Select account"
+            size="large"
+            showSearch
+            optionFilterProp="label"
+          >
+            {accounts.map(acc => (
+              <Option key={acc.id} value={acc.id} label={acc.name}>
+                <Space>
+                  <Text style={{ color: '#fff' }}>{acc.name}</Text>
+                  <Tag color="default" style={{ fontSize: 11 }}>
+                    {institutionName(acc.institution)}
+                  </Tag>
+                </Space>
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+
+        <Form.Item
+          name="balance"
+          label="Current Balance"
+          rules={[
+            { required: true, message: 'Balance is required' },
+            { type: 'number', min: 0, message: 'Balance must be positive' },
+          ]}
+        >
+          <InputNumber
+            prefix="$"
+            precision={2}
+            size="large"
+            style={{ width: '100%' }}
+            placeholder="0.00"
+            formatter={val => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+            parser={val => val.replace(/\$\s?|(,*)/g, '')}
+          />
+        </Form.Item>
+
+        <Form.Item name="assetName" label="Description (optional)">
+          <Input placeholder="e.g. Checking Account Balance" />
+        </Form.Item>
+      </Form>
+
+      <Space style={{ marginTop: 8 }}>
+        <Button size="large" onClick={onBack}>Back</Button>
+        <Button
+          type="primary"
+          size="large"
+          icon={<EditOutlined />}
+          loading={saving}
+          onClick={handleSave}
+          style={{ fontWeight: 600 }}
+        >
+          Save Balance
+        </Button>
+      </Space>
+    </div>
+  );
+};
+
+// =============================================================================
+// Removed Positions component
 // =============================================================================
 const RemovedPositions = ({ positions, onAddToWatchlist, addingToWatchlist }) => {
   if (!positions || positions.length === 0) return null;
@@ -270,9 +358,7 @@ const RemovedPositions = ({ positions, onAddToWatchlist, addingToWatchlist }) =>
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '10px 0',
-          borderBottom: i < positions.length - 1
-            ? `1px solid ${brandColors.darkBorder}`
-            : 'none',
+          borderBottom: i < positions.length - 1 ? `1px solid ${brandColors.darkBorder}` : 'none',
         }}>
           <Space size={12}>
             <Space direction="vertical" size={0}>
@@ -281,17 +367,14 @@ const RemovedPositions = ({ positions, onAddToWatchlist, addingToWatchlist }) =>
             </Space>
             {pos.currentPrice && (
               <Space direction="vertical" size={0}>
-                <Text style={{ color: '#fff', fontSize: 13 }}>
-                  {formatCurrency(pos.currentPrice)}
-                </Text>
+                <Text style={{ color: '#fff', fontSize: 13 }}>{formatCurrency(pos.currentPrice)}</Text>
                 <Text style={{ fontSize: 11, color: gainLossColor(pos.changePercent) }}>
                   {formatPercent(pos.changePercent)}
                 </Text>
               </Space>
             )}
           </Space>
-
-          <Tooltip title="Add to watchlist to track this security">
+          <Tooltip title="Add to watchlist">
             <Button
               size="small"
               icon={<StarOutlined />}
@@ -337,33 +420,33 @@ const StepResults = ({ result, onImportAnother, onAddToWatchlist, addingToWatchl
           <Divider type="vertical" style={{ height: 60, borderColor: brandColors.darkBorder }} />
 
           <Space size={24}>
-            <div>
-              <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>File</Text>
-              <Text style={{ color: '#fff', fontSize: 13 }}>{result.filename}</Text>
-            </div>
+            {result.filename && (
+              <div>
+                <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>File</Text>
+                <Text style={{ color: '#fff', fontSize: 13 }}>{result.filename}</Text>
+              </div>
+            )}
             <div>
               <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Imported</Text>
               <Text style={{ color: brandColors.gain, fontSize: 18, fontWeight: 700 }}>{result.rowsImported}</Text>
               <Text style={{ color: brandColors.textMuted, fontSize: 12 }}> positions</Text>
             </div>
-            <div>
-              <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Skipped</Text>
-              <Text style={{ color: brandColors.textSecondary, fontSize: 18, fontWeight: 700 }}>{result.rowsSkipped}</Text>
-            </div>
+            {result.rowsSkipped > 0 && (
+              <div>
+                <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Skipped</Text>
+                <Text style={{ color: brandColors.textSecondary, fontSize: 18, fontWeight: 700 }}>{result.rowsSkipped}</Text>
+              </div>
+            )}
             {result.removedPositions?.length > 0 && (
               <div>
                 <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Removed</Text>
-                <Text style={{ color: '#faad14', fontSize: 18, fontWeight: 700 }}>
-                  {result.removedPositions.length}
-                </Text>
+                <Text style={{ color: '#faad14', fontSize: 18, fontWeight: 700 }}>{result.removedPositions.length}</Text>
               </div>
             )}
             {result.errors?.length > 0 && (
               <div>
                 <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Errors</Text>
-                <Text style={{ color: brandColors.loss, fontSize: 18, fontWeight: 700 }}>
-                  {result.errors.length}
-                </Text>
+                <Text style={{ color: brandColors.loss, fontSize: 18, fontWeight: 700 }}>{result.errors.length}</Text>
               </div>
             )}
             {result.asOfDate && (
@@ -372,18 +455,22 @@ const StepResults = ({ result, onImportAnother, onAddToWatchlist, addingToWatchl
                 <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>{formatDate(result.asOfDate)}</Text>
               </div>
             )}
+            {result.balance && (
+              <div>
+                <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Balance</Text>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: 700 }}>{formatCurrency(result.balance)}</Text>
+              </div>
+            )}
           </Space>
         </Space>
       </Card>
 
-      {/* Removed positions with watchlist option */}
       <RemovedPositions
         positions={result.removedPositions}
         onAddToWatchlist={onAddToWatchlist}
         addingToWatchlist={addingToWatchlist}
       />
 
-      {/* Errors */}
       {result.errors?.length > 0 && (
         <Card
           size="small"
@@ -410,7 +497,7 @@ const StepResults = ({ result, onImportAnother, onAddToWatchlist, addingToWatchl
         onClick={onImportAnother}
         style={{ fontWeight: 600 }}
       >
-        Import Another File
+        Import Another
       </Button>
     </div>
   );
@@ -435,9 +522,11 @@ const Import = () => {
   const [addingToWatchlist, setAddingToWatchlist] = useState(null);
   const { message }                           = AntdApp.useApp();
 
+  const selectedImporterObj = importers.find(i => i.id === selectedImporter);
+  const isManual = selectedImporterObj?.isManual || false;
+
   useEffect(() => {
     let cancelled = false;
-
     const loadData = async () => {
       try {
         const [importerData, accountData, historyData] = await Promise.all([
@@ -456,32 +545,50 @@ const Import = () => {
         if (!cancelled) setHistoryLoading(false);
       }
     };
-
     loadData();
     return () => { cancelled = true; };
   }, []);
 
   const handleImport = async () => {
     if (!file || !selectedImporter) return;
-
     setImporting(true);
     try {
       const data = await importService.upload(file, selectedImporter, selectedAccount, syncMode);
       setResult(data);
       setCurrentStep(2);
-
       const historyData = await importService.getHistory();
       setHistory(historyData.history || []);
-
-      if (data.status === 'success') {
-        message.success(`Imported ${data.rowsImported} positions`);
-      } else if (data.status === 'partial') {
-        message.warning(`Partial import: ${data.rowsImported} imported, ${data.errors?.length} errors`);
-      } else {
-        message.error('Import failed — see errors below');
-      }
+      if (data.status === 'success') message.success(`Imported ${data.rowsImported} positions`);
+      else if (data.status === 'partial') message.warning(`Partial import: ${data.rowsImported} imported`);
+      else message.error('Import failed');
     } catch (err) {
       message.error(err.response?.data?.message || 'Import failed');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleManualSave = async (values) => {
+    setImporting(true);
+    try {
+      await importService.manualEntry(
+        values.accountId,
+        'CASH',
+        values.balance,
+        values.assetName || 'Cash Balance',
+        'cash'
+      );
+      setResult({
+        status: 'success',
+        rowsImported: 1,
+        balance: values.balance,
+      });
+      setCurrentStep(2);
+      const historyData = await importService.getHistory();
+      setHistory(historyData.history || []);
+      message.success(`Balance saved: ${formatCurrency(values.balance)}`);
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Failed to save balance');
     } finally {
       setImporting(false);
     }
@@ -490,25 +597,15 @@ const Import = () => {
   const handleAddToWatchlist = async (position) => {
     setAddingToWatchlist(position.ticker);
     try {
-      await watchlistService.add(
-        position.ticker,
-        position.assetName,
-        position.assetType,
-        null,
-        'import_sync'
-      );
+      await watchlistService.add(position.ticker, position.assetName, position.assetType, null, 'import_sync');
       message.success(`${position.ticker} added to watchlist`);
-      // Remove from removed positions display
       setResult(prev => ({
         ...prev,
         removedPositions: prev.removedPositions.filter(p => p.ticker !== position.ticker),
       }));
     } catch (err) {
-      if (err.response?.status === 409) {
-        message.info(`${position.ticker} is already on your watchlist`);
-      } else {
-        message.error('Failed to add to watchlist');
-      }
+      if (err.response?.status === 409) message.info(`${position.ticker} is already on your watchlist`);
+      else message.error('Failed to add to watchlist');
     } finally {
       setAddingToWatchlist(null);
     }
@@ -525,8 +622,8 @@ const Import = () => {
 
   const steps = [
     { title: 'Institution' },
-    { title: 'Upload'      },
-    { title: 'Results'     },
+    { title: isManual ? 'Enter Balance' : 'Upload' },
+    { title: 'Results' },
   ];
 
   if (loadError) return <Alert type="error" message={loadError} />;
@@ -549,7 +646,16 @@ const Import = () => {
           />
         )}
 
-        {currentStep === 1 && (
+        {currentStep === 1 && isManual && (
+          <StepManualEntry
+            accounts={accounts}
+            onBack={() => setCurrentStep(0)}
+            onSave={handleManualSave}
+            saving={importing}
+          />
+        )}
+
+        {currentStep === 1 && !isManual && (
           <StepUploadFile
             accounts={accounts}
             selectedAccount={selectedAccount}

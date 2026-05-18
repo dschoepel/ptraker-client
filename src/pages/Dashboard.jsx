@@ -184,11 +184,11 @@ const SummaryCards = ({ netWorth, priceInfo, isMobile }) => (
 // Account collapse panel header — shows summary when collapsed
 const AccountPanelHeader = ({ account }) => {
   const daysSince = account.last_imported_at
-  ? Math.floor(
-      (new Date().getTime() - new Date(account.last_imported_at).getTime())
-      / (1000 * 60 * 60 * 24)
-    )
-  : null;
+    ? Math.floor(
+        (new Date().getTime() - new Date(account.last_imported_at).getTime()) /
+          (1000 * 60 * 60 * 24),
+      )
+    : null;
 
   const freshnessColor =
     daysSince === null
@@ -202,18 +202,28 @@ const AccountPanelHeader = ({ account }) => {
   return (
     <Row
       align="middle"
-      gutter={[16, 0]}
-      style={{ width: "100%", padding: "4px 0" }}
+      gutter={[8, 0]}
+      style={{ width: "100%", padding: "2px 0" }}
     >
-      <Col xs={24} sm={7} md={5}>
-        <Space size={8}>
-          <Text style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>
-            {account.account_name}
-          </Text>
-          <Tag color="default" style={{ fontSize: 10 }}>
-            {institutionName(account.institution)}
-          </Tag>
-        </Space>
+      <Col xs={24} sm={8} md={6}>
+        <Text
+          style={{
+            color: "#fff",
+            fontWeight: 600,
+            fontSize: 13,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            maxWidth: 200,
+            display: "block",
+          }}
+          title={account.account_name}
+        >
+          {account.account_name}
+        </Text>
+        <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>
+          {institutionName(account.institution)}
+        </Text>
       </Col>
       <Col xs={8} sm={4} md={3}>
         <Text
@@ -253,10 +263,17 @@ const AccountPanelHeader = ({ account }) => {
         >
           Gain/Loss
         </Text>
-        <Space size={4}>
-          <GainLossIndicator value={account.total_gain_loss} />
-          <ColoredValue value={account.total_gain_loss} />
-        </Space>
+        {account.account_type === "checking" ||
+        account.account_type === "savings" ? (
+          <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
+            —
+          </Text>
+        ) : (
+          <Space size={4}>
+            <GainLossIndicator value={account.total_gain_loss} />
+            <ColoredValue value={account.total_gain_loss} />
+          </Space>
+        )}
       </Col>
       <Col xs={0} sm={0} md={3}>
         <Text
@@ -268,7 +285,14 @@ const AccountPanelHeader = ({ account }) => {
         >
           Today
         </Text>
-        <ColoredValue value={account.total_days_change} />
+        {account.account_type === "checking" ||
+        account.account_type === "savings" ? (
+          <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
+            —
+          </Text>
+        ) : (
+          <ColoredValue value={account.total_days_change} />
+        )}
       </Col>
       <Col xs={0} sm={0} md={2}>
         <Text
@@ -566,10 +590,20 @@ const AccountPositionsTable = ({ positions, accountSummary, isMobile }) => {
               </Text>
             </Table.Summary.Cell>
             <Table.Summary.Cell index={6} align="right">
-              <ColoredValue value={accountSummary.total_gain_loss} />
+              {accountSummary.account_type === "checking" ||
+              accountSummary.account_type === "savings" ? (
+                <Text style={{ color: brandColors.textSecondary }}>—</Text>
+              ) : (
+                <ColoredValue value={accountSummary.total_gain_loss} />
+              )}
             </Table.Summary.Cell>
             <Table.Summary.Cell index={7} align="right">
-              <ColoredValue value={accountSummary.total_days_change} />
+              {accountSummary.account_type === "checking" ||
+              accountSummary.account_type === "savings" ? (
+                <Text style={{ color: brandColors.textSecondary }}>—</Text>
+              ) : (
+                <ColoredValue value={accountSummary.total_days_change} />
+              )}
             </Table.Summary.Cell>
           </Table.Summary.Row>
         </Table.Summary>

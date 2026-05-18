@@ -52,20 +52,27 @@ export const importService = {
   },
 
   upload: async (file, importerId, accountId = null, syncMode = false) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('importerId', importerId);
-  if (accountId) formData.append('accountId', accountId);
-  formData.append('syncMode', String(syncMode));  // add this line
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('importerId', importerId);
+    if (accountId) formData.append('accountId', accountId);
+    formData.append('syncMode', String(syncMode));  // add this line
 
-  const response = await api.post('/import/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return response.data;
-},
+    const response = await api.post('/import/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
 
   getHistory: async () => {
     const response = await api.get('/import/history');
+    return response.data;
+  },
+  manualEntry: async (accountId, ticker, balance, assetName, assetType) => {
+    const response = await api.post('/import/manual', {
+      importerId: 'manual',
+      accountId, ticker, balance, assetName, assetType,
+    });
     return response.data;
   },
 };

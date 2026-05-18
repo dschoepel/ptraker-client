@@ -10,8 +10,7 @@ Last updated: May 2026
 ## What This App Does
 
 portfolioTraker (ptraker) is a personal investment portfolio tracker frontend.
-It consumes the ptraker-api and displays a consolidated dashboard with current
-values, gain/loss calculations, import capabilities, and a watchlist.
+Tracks $2M+ across 6 accounts (LPL brokerage/retirement, CFCU bank, Schwab).
 
 ---
 
@@ -35,7 +34,7 @@ values, gain/loss calculations, import capabilities, and a watchlist.
 
 ---
 
-## Key ANTD v6 API Changes (breaking from v5)
+## Key ANTD v6 API Changes
 
 ```jsx
 // Statistic — valueStyle is deprecated
@@ -43,13 +42,13 @@ styles={{ content: { color: '#fff' } }}
 
 // Space — direction is deprecated
 <Space orientation="vertical">
+
+// Never use Date.now() in render — use new Date().getTime()
 ```
 
 ---
 
-## Brand / Theme
-
-Colors defined in `src/theme/index.js`:
+## Brand Colors
 
 ```javascript
 import { brandColors } from '../theme';
@@ -74,7 +73,7 @@ import { brandColors } from '../theme';
 src/
   theme/index.js            — ANTD design tokens + brandColors
   store/
-    context.js              — AuthContext createContext only
+    context.js              — AuthContext createContext only (no JSX)
     AuthContext.jsx         — AuthProvider component only
     useAuth.js              — useAuth hook only
   services/
@@ -91,11 +90,11 @@ src/
     AppLayout.jsx           — sidebar (desktop) + bottom tab bar (mobile)
   pages/
     Login.jsx               — email/password + forgot password
-    ResetPassword.jsx       — PASSWORD_RECOVERY event pattern
+    ResetPassword.jsx       — PASSWORD_RECOVERY event pattern (not URL hash)
     Dashboard.jsx           — collapsible account sections, live prices
     Accounts.jsx            — full CRUD + expandable positions
-    Import.jsx              — 3-step wizard + sync-delete + watchlist integration
-    Watchlist.jsx           — watchlist with sparkline charts + symbol search
+    Import.jsx              — 3-step wizard, file upload + manual entry
+    Watchlist.jsx           — sparkline charts, symbol search autocomplete
   App.jsx                   — routing, theme, auth provider
   main.jsx                  — entry point
   index.css                 — minimal reset
@@ -106,24 +105,23 @@ src/
 ## Auth Pattern
 
 Three files to avoid Fast Refresh warnings:
-- `context.js` — `createContext` only
-- `AuthContext.jsx` — `AuthProvider` only
-- `useAuth.js` — `useAuth` hook only
+- `context.js` — createContext only
+- `AuthContext.jsx` — AuthProvider only
+- `useAuth.js` — useAuth hook only
 
-State from localStorage via lazy useState — no useEffect needed:
 ```javascript
+// Lazy useState from localStorage — no useEffect
 const [token, setToken] = useState(() => localStorage.getItem('ptraker_token') || null);
 ```
 
 ### Forgot Password
-Calls Supabase directly (not Express) via `supabaseAuth` in `auth.service.js`.
+Calls Supabase directly via `supabaseAuth` — NOT through Express API.
 
 ### Reset Password
-Listens for `PASSWORD_RECOVERY` auth state event — do NOT parse URL hash.
+Listens for `PASSWORD_RECOVERY` event — do NOT parse URL hash.
 
-### Dev Email Link Issue
+### Dev Email Issue
 Links show `https://10.0.10.60` — manually change to `http://10.0.10.60:8100`.
-Works correctly in production with proper domain.
 
 ---
 
@@ -141,23 +139,21 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 **Never define components inside other components.**
 **Never call setState synchronously in useEffect.**
-**Never use `Date.now()` in render** — use `new Date().getTime()`.
-**Avoid impure functions in render.**
+**Never use Date.now() in render — use new Date().getTime().**
 
-### refreshKey pattern for re-fetching after mutations:
+### refreshKey pattern:
 ```javascript
 const [refreshKey, setRefreshKey] = useState(0);
 useEffect(() => { fetchData(); }, [refreshKey]);
-// After mutation:
-setRefreshKey(k => k + 1);
+setRefreshKey(k => k + 1); // trigger refetch
 ```
 
-### Cancelled flag pattern for async useEffect:
+### Cancelled flag for async useEffect:
 ```javascript
 useEffect(() => {
   let cancelled = false;
   const fetch = async () => {
-    const data = await someApi();
+    const data = await api();
     if (!cancelled) setState(data);
   };
   fetch();
@@ -167,62 +163,72 @@ useEffect(() => {
 
 ---
 
-## Dashboard Page
+## Dashboard — Key Details
 
-- Single `GET /api/v1/dashboard` call on mount
-- 4 summary cards: Total Value, Cost, Gain/Loss, Today's Change
+- Single `GET /api/v1/dashboard` call
+- 4 summary cards: Total Value, Cost, Gain/Loss, Today
 - Collapsible account sections (all collapsed by default)
-- Each header: name, institution, value, cost, gain/loss, today, holdings, last import
-- Last import uses `last_imported_at` from `account_summary` view
-- Freshness: green=today, grey=≤7 days, yellow=>7 days
 - `daysSince` uses `new Date().getTime()` not `Date.now()`
-- CASH shows `—` for gain/loss and today
-- Refresh Prices reloads full dashboard state after update
+- Last Import from `account_summary.last_imported_at`
+- Freshness: green=today, grey=≤7 days, yellow=>7 days
+
+### Cash Account Display Rules
+Bank accounts (type: checking, savings) show `—` for Gain/Loss and Today:
+```jsx
+{account.account_type === 'checking' || account.account_type === 'savings' ? (
+  <Text style={{ color: brandColors.textSecondary }}>—</Text>
+) : (
+  <ColoredValue value={account.total_gain_loss} />
+)}
+```
+Apply in both `AccountPanelHeader` and `AccountPositionsTable` summary row.
+
+### Account Header Layout
+Name as bold text, institution as muted subtitle below — NOT as a tag beside name.
+maxWidth on name text to prevent overflow. gutter={[8, 0]} on Row.
 
 ---
 
-## Accounts Page
+## Import Page — Key Details
 
-- Full CRUD with Popconfirm on delete
-- Expandable rows show positions (lazy loaded, cached)
-- refreshKey pattern for reloading after mutations
-- Mobile view not yet implemented
+### Importer types
+- File importers: show file upload (Dragger)
+- Manual importer: `isManual: true` flag → show balance form instead
+- Step 2 switches based on `selectedImporterObj?.isManual`
+
+### Manual Entry flow
+- `POST /api/v1/import/manual` with JSON body (no file)
+- Always creates CASH position with balance as shares value
+- Used for bank accounts with no recent transaction history
+
+### importService methods
+```javascript
+importService.upload(file, importerId, accountId, syncMode)
+importService.manualEntry(accountId, ticker, balance, assetName, assetType)
+importService.getImporters()  // includes isManual flag
+importService.getHistory()
+```
 
 ---
 
-## Import Page
+## Watchlist — Key Details
 
-- 3-step wizard: Institution → Upload → Results
-- Account selector optional — leave blank for auto-match by last 4 digits
-- Sync-delete checkbox (default on) — removes positions not in file
-- Results show removed positions with Watch button → adds to watchlist
-- Import history table refreshes after each import
-- `importService.upload(file, importerId, accountId, syncMode)`
-
----
-
-## Watchlist Page
-
-- Table with sparkline charts (30-day area chart, recharts)
-- Sparkline: green if up over period, red if down
+- Sparkline: AreaChart (recharts), 30-day data from `/watchlist/:ticker/history`
+- Green line if price up over period, red if down
 - YAxis domain padded to amplify small movements
-- Symbol search via `AutoComplete` + `GET /api/v1/watchlist/search?q=`
-  Uses yahoo-finance2 `search` module (NOT `autoc` — decomissioned)
-- Add manually or auto-added from import sync-delete
-- Edit notes, delete with Popconfirm
-- `added_from` field: 'manual' or 'import_sync'
+- Symbol search: AutoComplete + `/watchlist/search?q=` 
+  Uses yahoo-finance2 `search` module (autoc is decomissioned)
+- added_from: 'manual' | 'import_sync'
 
 ---
 
-## Nav Items (AppLayout)
+## Nav Items
 
 ```javascript
-const navItems = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
-  { key: '/accounts',  icon: <BankOutlined />,      label: 'Accounts'  },
-  { key: '/import',    icon: <UploadOutlined />,     label: 'Import'    },
-  { key: '/watchlist', icon: <StarOutlined />,       label: 'Watchlist' },
-];
+{ key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+{ key: '/accounts',  icon: <BankOutlined />,      label: 'Accounts'  },
+{ key: '/import',    icon: <UploadOutlined />,     label: 'Import'    },
+{ key: '/watchlist', icon: <StarOutlined />,       label: 'Watchlist' },
 ```
 
 Mobile bottom tab bar maps over navItems automatically.
@@ -233,27 +239,25 @@ Mobile bottom tab bar maps over navItems automatically.
 
 | Page | Status | Notes |
 |---|---|---|
-| Login | ✅ Complete | |
-| Reset Password | ✅ Complete | PASSWORD_RECOVERY event |
-| Dashboard | ✅ Complete | Collapsible, live prices, last import |
-| Accounts | ✅ Complete | Full CRUD, expandable positions |
-| Import | ✅ Complete | Wizard, sync-delete, watchlist integration |
-| Watchlist | ✅ Complete | Sparklines, symbol search |
-| Profile/Settings | 🔜 Planned | |
-| Admin/User Mgmt | 🔜 Planned | Invite family members |
+| Login | ✅ | |
+| Reset Password | ✅ | PASSWORD_RECOVERY event |
+| Dashboard | ✅ | Collapsible, live prices, last import, cash account rules |
+| Accounts | ✅ | Full CRUD, expandable positions |
+| Import | ✅ | File + manual entry, sync-delete, watchlist integration |
+| Watchlist | ✅ | Sparklines, symbol autocomplete |
+| Profile/Settings | 🔜 | |
+| Admin/User Mgmt | 🔜 | Invite family members |
 
 ---
 
-## Known Issues / TODO
+## TODO
 
-- [ ] User invite flow (admin invites family members by email)
-- [ ] Portfolio sharing (view-only access between users)
-- [ ] Email templates not yet branded (Studio skeleton issue)
+- [ ] User invite flow
+- [ ] Portfolio sharing (view-only)
+- [ ] Email templates branding
 - [ ] OTP code entry for password reset
 - [ ] Mobile view for Accounts page
 - [ ] Profile/settings page
-- [ ] Data export (download all user data)
+- [ ] Data export
 - [ ] Account deletion with confirmation
-- [ ] System theme change at runtime not reactive
-- [ ] No error boundary component
-- [ ] Production deployment not yet done
+- [ ] Production deployment
