@@ -32,6 +32,7 @@ values, gain/loss calculations, and import capabilities.
 | HTTP | Axios |
 | Dates | dayjs |
 | State | React Context (AuthContext) |
+| Supabase direct | @supabase/supabase-js (auth flows only) |
 
 ---
 
@@ -88,7 +89,9 @@ src/
     useAuth.js        — useAuth hook only
   services/
     api.js            — Axios instance with auth interceptor + token refresh
-    auth.service.js   — login, logout, profile, forgotPassword
+    auth.service.js   — login, logout, profile, forgotPassword, resetPassword
+                        NOTE: forgotPassword calls Supabase directly (not Express)
+                        exports supabaseAuth client for ResetPassword page
     dashboard.service.js — dashboard, positions, accounts, import, prices
   utils/
     formatters.js     — formatCurrency, formatPercent, formatShares, formatDate,
@@ -97,13 +100,14 @@ src/
   layouts/
     AppLayout.jsx     — responsive shell: desktop sidebar + mobile bottom tab bar
   pages/
-    Login.jsx         — login form with forgot password
+    Login.jsx         — login form with forgot password flow
+    ResetPassword.jsx — password reset (listens for PASSWORD_RECOVERY auth event)
     Dashboard.jsx     — portfolio overview with collapsible account sections
-    Accounts.jsx      — account management (placeholder — not yet built)
-    Import.jsx        — file import wizard (placeholder — not yet built)
+    Accounts.jsx      — account management full CRUD + expandable positions
+    Import.jsx        — 3-step import wizard + history table
   App.jsx             — routing, theme, auth provider
   main.jsx            — entry point
-  index.css           — minimal reset only, ANTD handles component styles
+  index.css           — minimal reset only
 ```
 
 ---
@@ -122,6 +126,30 @@ const [token, setToken] = useState(() => localStorage.getItem('ptraker_token') |
 
 Token auto-refreshed by Axios interceptor in `api.js` on 401 response.
 
+### Forgot Password Flow
+Calls Supabase directly from browser (not via Express) to ensure correct
+verification URL is built. Uses `supabaseAuth` client from `auth.service.js`.
+
+### Reset Password Flow
+Uses `supabaseAuth.auth.onAuthStateChange()` to listen for `PASSWORD_RECOVERY`
+event — do NOT try to parse URL hash, Supabase v2 doesn't put tokens there.
+
+### Dev Email Link Issue
+In dev, Supabase email links show `https://10.0.10.60` (no port).
+Manually change to `http://10.0.10.60:8100` in the browser address bar.
+This is a GoTrue dev environment issue — works correctly in production
+where pt-api.schoepels.com / api.ptraker.com is properly configured.
+
+---
+
+## Environment Variables
+
+```env
+VITE_API_URL=http://localhost:5000/api/v1
+VITE_SUPABASE_URL=http://10.0.10.60:8100
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
 ---
 
 ## Component Rules
@@ -129,25 +157,24 @@ Token auto-refreshed by Axios interceptor in `api.js` on 401 response.
 **Never define components inside other components** — causes recreation on every render.
 All sub-components must be defined at module level and receive props.
 
+**Never call setState synchronously in useEffect** — use lazy useState or refreshKey pattern:
 ```javascript
-// WRONG — defined inside Dashboard
-const Dashboard = () => {
-  const SummaryCards = () => ...   // recreated every render
-}
-
-// CORRECT — defined outside
-const SummaryCards = ({ netWorth, isMobile }) => ...
-const Dashboard = () => <SummaryCards netWorth={...} isMobile={...} />
+// Refresh trigger pattern for re-fetching after mutations
+const [refreshKey, setRefreshKey] = useState(0);
+const triggerRefresh = () => setRefreshKey(k => k + 1);
+useEffect(() => { fetchData(); }, [refreshKey]);
 ```
 
-**Never call setState synchronously in useEffect** — use lazy useState initializer instead:
+**useEffect for external subscriptions is fine:**
 ```javascript
-// WRONG
-useEffect(() => { setCollapsed(true); }, [screens.md]);
-
-// CORRECT
-const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
+// Subscribing to external system (Supabase auth) — correct use of useEffect
+useEffect(() => {
+  const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(...);
+  return () => subscription.unsubscribe();
+}, []);
 ```
+
+**Avoid impure functions in render** — don't use `Date.now()`, use `new Date().getTime()`.
 
 ---
 
@@ -155,9 +182,10 @@ const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
 
 - `useBreakpoint()` from ANTD Grid for breakpoint detection
 - `isMobile = !screens.md` (breakpoint: 768px)
-- Desktop: collapsible sidebar (220px), full data table
+- Desktop: collapsible sidebar (220px), full data tables
 - Mobile: fixed header (56px) + bottom tab bar (60px), card-based lists
 - iOS safe area: `paddingBottom: 'env(safe-area-inset-bottom)'`
+- If `screens` is declared but mobile view not implemented yet — remove it to avoid lint warning
 
 ---
 
@@ -166,15 +194,48 @@ const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
 - Single API call to `GET /api/v1/dashboard` on mount
 - Net worth summary cards (4 cards: Total Value, Cost, Gain/Loss, Today's Change)
 - Positions grouped by account in collapsible ANTD Collapse panels
-- All panels collapsed by default — click arrow to expand
-- Each panel header shows: account name, institution tag, value, cost, gain/loss, today, holdings count
-- Expanded panel shows positions table with Account Total summary row
-- Refresh Prices button in Dashboard (not AppLayout) so it can reload dashboard state after refresh
+- All panels collapsed by default
+- Each panel header shows: account name, institution, value, cost, gain/loss,
+  today's change, holdings count, last import time
+- Last Import uses `last_imported_at` from `account_summary` view
+  (subquery on import_history, not as_of_date from file)
+- Freshness colors: green=today, grey=≤7 days, yellow=>7 days
 - CASH positions show `—` for gain/loss and today's change
-- Price timestamp shown right-aligned next to Accounts heading
+- Refresh Prices button in Dashboard reloads dashboard state after refresh
 
-### Table columns (desktop)
-Ticker (with truncated name below) | Type | Shares | Price (with % change) | Value | Cost | Gain/Loss (with %) | Today
+### daysSince calculation
+```javascript
+// Use new Date().getTime() not Date.now() — linter flags Date.now() as impure
+const daysSince = account.last_imported_at
+  ? Math.floor(
+      (new Date().getTime() - new Date(account.last_imported_at).getTime())
+      / (1000 * 60 * 60 * 24)
+    )
+  : null;
+```
+
+---
+
+## Accounts Page
+
+- Full CRUD: create, edit, deactivate/reactivate, delete
+- Expandable rows show positions for that account (lazy loaded, cached)
+- Positions loaded from dashboard endpoint filtered by account_id
+- Delete has Popconfirm to prevent accidents
+- refreshKey pattern used for reloading after mutations
+- Mobile view not yet implemented (screens variable removed to avoid lint warning)
+
+---
+
+## Import Page
+
+- 3-step wizard: Institution → Upload → Results
+- Step 1: Select importer plugin from API
+- Step 2: Select account (optional — leave blank for auto-match by account number)
+          Drag-and-drop file upload, accepts CSV/QFX/OFX
+- Step 3: Results showing imported count, skipped, errors with detail
+- Import history table below wizard, refreshes after each import
+- account_id recorded in import_history for last_imported_at tracking
 
 ---
 
@@ -182,51 +243,29 @@ Ticker (with truncated name below) | Type | Shares | Price (with % change) | Val
 
 | Page | Status | Notes |
 |---|---|---|
-| Login | ✅ Complete | Email/password, forgot password link |
-| Dashboard | ✅ Complete | Collapsible accounts, live prices, refresh |
-| Accounts | 🔜 Planned | List/edit/deactivate accounts |
-| Import | 🔜 Planned | File upload wizard with institution selector |
-| Profile | 🔜 Planned | Edit display name, avatar |
-
----
-
-## Environment Variables
-
-```env
-VITE_API_URL=http://localhost:5000/api/v1
-```
-
-In production, set to the deployed API URL.
-
----
-
-## Production Build
-
-```bash
-npm run build   # outputs to dist/
-```
-
-The `dist/` folder is served as static files by Nginx/Swag on Jupiter VPS.
-No Node.js needed in production for the client.
-
----
-
-## Production Deployment (when ready)
-
-- Build: `npm run build`
-- Copy `dist/` to Jupiter VPS
-- Serve via Swag/Nginx as static files for `ptraker.com`
-- Swag proxy conf: `ptraker.subdomain.conf` → static files
-- Update `VITE_API_URL` to `https://api.ptraker.com` before building
+| Login | ✅ Complete | Email/password, forgot password |
+| Reset Password | ✅ Complete | PASSWORD_RECOVERY event pattern |
+| Dashboard | ✅ Complete | Collapsible accounts, live prices, last import |
+| Accounts | ✅ Complete | Full CRUD, expandable positions |
+| Import | ✅ Complete | 3-step wizard, history |
+| Watchlist | 🔜 Planned | Track securities of interest |
+| Profile/Settings | 🔜 Planned | Edit display name, avatar |
+| Admin/User Mgmt | 🔜 Planned | Invite family members |
 
 ---
 
 ## Known Issues / TODO
 
-- [ ] Accounts page not yet built
-- [ ] Import wizard not yet built
-- [ ] Profile/settings page not yet built
+- [ ] Sync-delete on import (remove positions no longer in file) — opt-in checkbox
+- [ ] Watchlist page — with sync-delete integration
+- [ ] Email templates not yet branded (Studio templates UI skeleton issue)
+- [ ] OTP code entry for password reset (alternative to email link)
+- [ ] Mobile view not built for Accounts page
+- [ ] Portfolio sharing (view-only access between family members)
+- [ ] User invite flow (admin invites family members)
+- [ ] Data export (download all user data)
+- [ ] Account deletion with confirmation
 - [ ] System theme change at runtime not reactive (requires page reload)
-- [ ] Mobile view not fully tested on real iPhone yet
-- [ ] No loading skeleton — just Spin component while data loads
 - [ ] No error boundary component yet
+- [ ] Production Supabase server not yet provisioned
+- [ ] ptraker.com DNS not yet configured

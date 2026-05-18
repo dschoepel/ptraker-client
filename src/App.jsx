@@ -1,14 +1,15 @@
-import { ConfigProvider, theme as antdTheme, App as AntdApp } from 'antd';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './store/authContext';
-import {  useAuth } from './store/useAuth';
-import { darkTheme, lightTheme } from './theme';
+import { ConfigProvider, theme as antdTheme, App as AntdApp } from "antd";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./store/authContext";
+import { useAuth } from "./store/useAuth";
+import { darkTheme, lightTheme } from "./theme";
+import ResetPassword from "./pages/ResetPassword";
 
-import AppLayout from './layouts/AppLayout';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Accounts from './pages/Accounts';
-import Import from './pages/Import';
+import AppLayout from "./layouts/AppLayout";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Accounts from "./pages/Accounts";
+import Import from "./pages/Import";
 
 // =============================================================================
 // ProtectedRoute — redirects to login if not authenticated
@@ -27,7 +28,7 @@ const ProtectedRoute = ({ children }) => {
 // =============================================================================
 const ThemedApp = () => {
   // Detect system color scheme preference
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const selectedTheme = prefersDark ? darkTheme : lightTheme;
 
   return (
@@ -44,6 +45,7 @@ const ThemedApp = () => {
           <Routes>
             {/* Public route */}
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected routes — wrapped in AppLayout */}
             <Route

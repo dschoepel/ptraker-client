@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Form, Input, Button, Typography, Alert } from "antd";
+import { Form, Input, Button, Typography, Alert, App as AntdApp } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../store/useAuth";
 import { brandColors } from "../theme";
+import { authService } from '../services/auth.service';
 
 const { Title, Text, Link } = Typography;
 
@@ -18,21 +19,29 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const { message } = AntdApp.useApp();
 
-  const handleLogin = async (values) => {
-    setLoading(true);
-    setError(null);
-    try {
+  
+  const handleSubmit = async (values) => {
+  setLoading(true);
+  setError(null);
+  try {
+    if (forgotMode) {
+      await authService.forgotPassword(values.email);
+      setError(null);
+      // Show success message
+      message.success('Reset link sent — check your email');
+      setForgotMode(false);
+    } else {
       await login(values.email, values.password);
-      navigate("/dashboard");
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Login failed. Please try again.",
-      );
-    } finally {
-      setLoading(false);
+      navigate('/dashboard');
     }
-  };
+  } catch (err) {
+    setError(err.response?.data?.message || 'Something went wrong');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div
@@ -108,7 +117,7 @@ const Login = () => {
           <Form
             form={form}
             layout="vertical"
-            onFinish={handleLogin}
+            onFinish={handleSubmit}
             requiredMark={false}
           >
             <Form.Item

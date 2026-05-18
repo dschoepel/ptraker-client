@@ -12,7 +12,8 @@ import {
   Grid,
   Space,
   Collapse,
-  App as AntdApp, Button,
+  App as AntdApp,
+  Button,
 } from "antd";
 import {
   ArrowUpOutlined,
@@ -22,7 +23,7 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { dashboardService } from "../services/dashboard.service";
-import { priceService } from '../services/dashboard.service';
+import { priceService } from "../services/dashboard.service";
 import {
   formatCurrency,
   formatPercent,
@@ -181,73 +182,143 @@ const SummaryCards = ({ netWorth, priceInfo, isMobile }) => (
 );
 
 // Account collapse panel header — shows summary when collapsed
-const AccountPanelHeader = ({ account }) => (
-  <Row
-    align="middle"
-    gutter={[16, 0]}
-    style={{ width: "100%", padding: "4px 0" }}
-  >
-    <Col xs={24} sm={8} md={6}>
-      <Space size={8}>
-        <Text style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>
-          {account.account_name}
+const AccountPanelHeader = ({ account }) => {
+  const daysSince = account.last_imported_at
+  ? Math.floor(
+      (new Date().getTime() - new Date(account.last_imported_at).getTime())
+      / (1000 * 60 * 60 * 24)
+    )
+  : null;
+
+  const freshnessColor =
+    daysSince === null
+      ? brandColors.textMuted
+      : daysSince === 0
+        ? brandColors.gain
+        : daysSince <= 7
+          ? brandColors.textSecondary
+          : "#faad14"; // yellow warning if older than a week
+
+  return (
+    <Row
+      align="middle"
+      gutter={[16, 0]}
+      style={{ width: "100%", padding: "4px 0" }}
+    >
+      <Col xs={24} sm={7} md={5}>
+        <Space size={8}>
+          <Text style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>
+            {account.account_name}
+          </Text>
+          <Tag color="default" style={{ fontSize: 10 }}>
+            {institutionName(account.institution)}
+          </Tag>
+        </Space>
+      </Col>
+      <Col xs={8} sm={4} md={3}>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Value
         </Text>
-        <Tag color="default" style={{ fontSize: 10 }}>
-          {institutionName(account.institution)}
-        </Tag>
-      </Space>
-    </Col>
-    <Col xs={8} sm={5} md={4}>
-      <Text
-        style={{ color: brandColors.textMuted, fontSize: 11, display: "block" }}
-      >
-        Value
-      </Text>
-      <Text style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>
-        {formatCurrency(account.total_current_value)}
-      </Text>
-    </Col>
-    <Col xs={8} sm={5} md={4}>
-      <Text
-        style={{ color: brandColors.textMuted, fontSize: 11, display: "block" }}
-      >
-        Cost
-      </Text>
-      <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
-        {formatCurrency(account.total_cost_basis)}
-      </Text>
-    </Col>
-    <Col xs={8} sm={5} md={4}>
-      <Text
-        style={{ color: brandColors.textMuted, fontSize: 11, display: "block" }}
-      >
-        Gain/Loss
-      </Text>
-      <Space size={4}>
-        <GainLossIndicator value={account.total_gain_loss} />
-        <ColoredValue value={account.total_gain_loss} />
-      </Space>
-    </Col>
-    <Col xs={0} sm={0} md={4}>
-      <Text
-        style={{ color: brandColors.textMuted, fontSize: 11, display: "block" }}
-      >
-        Today
-      </Text>
-      <ColoredValue value={account.total_days_change} />
-    </Col>
-    <Col xs={0} sm={0} md={2}>
-      <Text
-        style={{ color: brandColors.textMuted, fontSize: 11, display: "block" }}
-      >
-        Holdings
-      </Text>
-      <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
-        {account.position_count}
-      </Text>
-    </Col>
-  </Row>
-);
+        <Text style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>
+          {formatCurrency(account.total_current_value)}
+        </Text>
+      </Col>
+      <Col xs={8} sm={4} md={3}>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Cost
+        </Text>
+        <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
+          {formatCurrency(account.total_cost_basis)}
+        </Text>
+      </Col>
+      <Col xs={8} sm={4} md={3}>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Gain/Loss
+        </Text>
+        <Space size={4}>
+          <GainLossIndicator value={account.total_gain_loss} />
+          <ColoredValue value={account.total_gain_loss} />
+        </Space>
+      </Col>
+      <Col xs={0} sm={0} md={3}>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Today
+        </Text>
+        <ColoredValue value={account.total_days_change} />
+      </Col>
+      <Col xs={0} sm={0} md={2}>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Holdings
+        </Text>
+        <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
+          {account.position_count}
+        </Text>
+      </Col>
+      <Col xs={0} sm={0} md={4}>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Last Import
+        </Text>
+        {account.last_imported_at ? (
+          <Space size={4}>
+            <Text style={{ color: freshnessColor, fontSize: 12 }}>
+              {daysSince === 0
+                ? "Today"
+                : daysSince === 1
+                  ? "Yesterday"
+                  : `${daysSince}d ago`}
+            </Text>
+            <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>
+              {new Date(account.last_imported_at).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </Text>
+          </Space>
+        ) : (
+          <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+            Never
+          </Text>
+        )}
+      </Col>
+    </Row>
+  );
+};
 
 // Desktop positions table columns
 const desktopColumns = [
@@ -516,23 +587,23 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const screens = useBreakpoint();
   const isMobile = !screens.md;
-const [refreshing, setRefreshing] = useState(false);
-const { message } = AntdApp.useApp();
+  const [refreshing, setRefreshing] = useState(false);
+  const { message } = AntdApp.useApp();
 
-const handleRefreshPrices = async () => {
-  setRefreshing(true);
-  try {
-    await priceService.refresh();
-    // Reload dashboard data to show updated prices and timestamp
-    const data = await dashboardService.getDashboard();
-    setDashboard(data);
-    message.success('Prices updated');
-  } catch {
-    message.error('Price refresh failed');
-  } finally {
-    setRefreshing(false);
-  }
-};
+  const handleRefreshPrices = async () => {
+    setRefreshing(true);
+    try {
+      await priceService.refresh();
+      // Reload dashboard data to show updated prices and timestamp
+      const data = await dashboardService.getDashboard();
+      setDashboard(data);
+      message.success("Prices updated");
+    } catch {
+      message.error("Price refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
+  };
   useEffect(() => {
     const load = async () => {
       try {
@@ -603,30 +674,47 @@ const handleRefreshPrices = async () => {
         isMobile={isMobile}
       />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-  <Title level={5} style={{ color: brandColors.textSecondary, margin: 0 }}>
-    Accounts
-    <Text style={{ color: brandColors.textMuted, fontSize: 13, marginLeft: 8, fontWeight: 400 }}>
-      ({accounts.length} accounts · {positions.length} holdings)
-    </Text>
-  </Title>
-  <Space>
-    {priceInfo?.newestPriceAt && (
-      <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
-        Prices as of {formatDateTime(priceInfo.newestPriceAt)}
-      </Text>
-    )}
-    <Button
-      type="text"
-      icon={<ReloadOutlined spin={refreshing} />}
-      loading={refreshing}
-      onClick={handleRefreshPrices}
-      style={{ color: brandColors.textSecondary }}
-    >
-      Refresh Prices
-    </Button>
-  </Space>
-</div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
+        <Title
+          level={5}
+          style={{ color: brandColors.textSecondary, margin: 0 }}
+        >
+          Accounts
+          <Text
+            style={{
+              color: brandColors.textMuted,
+              fontSize: 13,
+              marginLeft: 8,
+              fontWeight: 400,
+            }}
+          >
+            ({accounts.length} accounts · {positions.length} holdings)
+          </Text>
+        </Title>
+        <Space>
+          {priceInfo?.newestPriceAt && (
+            <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+              Prices as of {formatDateTime(priceInfo.newestPriceAt)}
+            </Text>
+          )}
+          <Button
+            type="text"
+            icon={<ReloadOutlined spin={refreshing} />}
+            loading={refreshing}
+            onClick={handleRefreshPrices}
+            style={{ color: brandColors.textSecondary }}
+          >
+            Refresh Prices
+          </Button>
+        </Space>
+      </div>
 
       <Collapse
         ghost
