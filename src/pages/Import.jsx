@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import {
   Steps, Card, Select, Button, Upload, Typography, Alert,
-  Result, Table, Tag, Space, Divider, App as AntdApp, Spin
+  Table, Tag, Space, Divider, App as AntdApp, Spin
 } from 'antd';
 import {
   UploadOutlined, CheckCircleOutlined, CloseCircleOutlined,
   WarningOutlined, InboxOutlined, ReloadOutlined
 } from '@ant-design/icons';
 import { importService, accountService } from '../services/dashboard.service';
-import { formatCurrency, formatDate, institutionName } from '../utils/formatters';
+import { formatDate, institutionName } from '../utils/formatters';
 import { brandColors } from '../theme';
 
 const { Title, Text } = Typography;
@@ -146,7 +146,6 @@ const StepUploadFile = ({
   file, onFileSelect, onRemoveFile,
   onBack, onImport, importing
 }) => {
-  const selectedImporterInstitution = accounts.find(a => a.id === selectedAccount)?.institution;
 
   return (
     <div style={{ maxWidth: 560 }}>
@@ -398,7 +397,7 @@ const Import = () => {
           setAccounts(accountData.accounts.filter(a => a.is_active));
           setHistory(historyData.history || []);
         }
-      } catch (err) {
+      } catch  {
         if (!cancelled) setLoadError('Failed to load import data');
       } finally {
         if (!cancelled) setHistoryLoading(false);
