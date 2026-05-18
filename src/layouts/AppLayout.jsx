@@ -5,7 +5,7 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   DashboardOutlined, BankOutlined, UploadOutlined, UserOutlined,
-  LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, 
+  LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, StarOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../store/useAuth';
 
@@ -23,6 +23,7 @@ const navItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
   { key: '/accounts',  icon: <BankOutlined />,      label: 'Accounts'  },
   { key: '/import',    icon: <UploadOutlined />,     label: 'Import'    },
+  { key: '/watchlist', icon: <StarOutlined />,       label: 'Watchlist' },
 ];
 
 // =============================================================================

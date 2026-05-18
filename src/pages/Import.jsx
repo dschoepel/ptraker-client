@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import {
   Steps, Card, Select, Button, Upload, Typography, Alert,
-  Table, Tag, Space, Divider, App as AntdApp, Spin
+  Table, Tag, Space, Divider, App as AntdApp, Spin, Checkbox, Tooltip
 } from 'antd';
 import {
   UploadOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  WarningOutlined, InboxOutlined, ReloadOutlined
+  WarningOutlined, InboxOutlined, ReloadOutlined, StarOutlined
 } from '@ant-design/icons';
-import { importService, accountService } from '../services/dashboard.service';
-import { formatDate, institutionName } from '../utils/formatters';
+import { importService, accountService, watchlistService } from '../services/dashboard.service';
+import { formatCurrency, formatPercent, formatDate, institutionName, gainLossColor } from '../utils/formatters';
 import { brandColors } from '../theme';
 
 const { Title, Text } = Typography;
@@ -18,12 +18,7 @@ const { Dragger } = Upload;
 // =============================================================================
 // Import Page — 3-step wizard
 // =============================================================================
-// Step 1: Select institution (importer plugin)
-// Step 2: Select account + upload file
-// Step 3: Results
-// =============================================================================
 
-// Import history table columns
 const historyColumns = [
   {
     title: 'File',
@@ -91,8 +86,7 @@ const historyColumns = [
 const StepSelectInstitution = ({ importers, selectedImporter, onSelect, onNext }) => (
   <div style={{ maxWidth: 500 }}>
     <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 16 }}>
-      Select the institution you are importing from. Each institution has its own
-      file format — make sure to export the file in the correct format.
+      Select the institution you are importing from.
     </Text>
 
     <Select
@@ -144,101 +138,180 @@ const StepSelectInstitution = ({ importers, selectedImporter, onSelect, onNext }
 const StepUploadFile = ({
   accounts, selectedAccount, onSelectAccount,
   file, onFileSelect, onRemoveFile,
+  syncMode, onSyncModeChange,
   onBack, onImport, importing
-}) => {
+}) => (
+  <div style={{ maxWidth: 560 }}>
+    <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 16 }}>
+      Select the account and upload the exported file.
+    </Text>
+
+    <div style={{ marginBottom: 20 }}>
+      <Text style={{ color: brandColors.textSecondary, fontSize: 13, display: 'block', marginBottom: 4 }}>
+        Account
+        <Text style={{ color: brandColors.textMuted, fontSize: 12, marginLeft: 6 }}>
+          (optional — leave blank to auto-match by account number in file)
+        </Text>
+      </Text>
+      <Select
+        placeholder="Auto-match by account number"
+        value={selectedAccount}
+        onChange={onSelectAccount}
+        size="large"
+        style={{ width: '100%' }}
+        showSearch
+        optionFilterProp="label"
+        allowClear
+      >
+        {accounts.map(acc => (
+          <Option key={acc.id} value={acc.id} label={acc.name}>
+            <Space>
+              <Text style={{ color: '#fff' }}>{acc.name}</Text>
+              <Tag color="default" style={{ fontSize: 11 }}>
+                {institutionName(acc.institution)}
+              </Tag>
+            </Space>
+          </Option>
+        ))}
+      </Select>
+      {selectedAccount && (
+        <Alert
+          type="warning"
+          style={{ marginTop: 8 }}
+          message={
+            <Text style={{ fontSize: 12 }}>
+              All positions in this file will be imported into the selected account,
+              overriding auto-matching.
+            </Text>
+          }
+        />
+      )}
+    </div>
+
+    <div style={{ marginBottom: 20 }}>
+      <Text style={{ color: brandColors.textSecondary, fontSize: 13, display: 'block', marginBottom: 8 }}>
+        Export File
+      </Text>
+      <Dragger
+        accept=".csv,.qfx,.ofx"
+        maxCount={1}
+        fileList={file ? [file] : []}
+        beforeUpload={(f) => { onFileSelect(f); return false; }}
+        onRemove={onRemoveFile}
+        style={{ background: brandColors.darkHover, borderColor: brandColors.darkBorder }}
+      >
+        <p style={{ margin: '16px 0 8px' }}>
+          <InboxOutlined style={{ fontSize: 36, color: brandColors.gold }} />
+        </p>
+        <p style={{ color: '#fff', fontSize: 14, margin: '0 0 4px' }}>Click or drag file here</p>
+        <p style={{ color: brandColors.textMuted, fontSize: 12, margin: 0 }}>
+          Accepted: CSV, QFX, OFX
+        </p>
+      </Dragger>
+    </div>
+
+    <div style={{ marginBottom: 24 }}>
+      <Tooltip title="Removes positions from the database that are no longer in the exported file. Useful when you've sold a position. You'll have the option to add removed positions to your watchlist.">
+        <Checkbox
+          checked={syncMode}
+          onChange={e => onSyncModeChange(e.target.checked)}
+          style={{ color: brandColors.textSecondary }}
+        >
+          Remove positions no longer in this file
+          <Text style={{ color: brandColors.textMuted, fontSize: 12, marginLeft: 6 }}>
+            (recommended for full position exports)
+          </Text>
+        </Checkbox>
+      </Tooltip>
+    </div>
+
+    <Space>
+      <Button size="large" onClick={onBack}>Back</Button>
+      <Button
+        type="primary"
+        size="large"
+        icon={<UploadOutlined />}
+        disabled={!file}
+        loading={importing}
+        onClick={onImport}
+        style={{ fontWeight: 600 }}
+      >
+        {importing ? 'Importing...' : 'Import File'}
+      </Button>
+    </Space>
+  </div>
+);
+
+// =============================================================================
+// Removed Positions — shown in results when sync-delete ran
+// =============================================================================
+const RemovedPositions = ({ positions, onAddToWatchlist, addingToWatchlist }) => {
+  if (!positions || positions.length === 0) return null;
 
   return (
-    <div style={{ maxWidth: 560 }}>
-      <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 16 }}>
-        Select the account this file belongs to, then upload the exported file.
-      </Text>
-
-      {/* Account selector */}
-      <div style={{ marginBottom: 20 }}>
-        <Text style={{
-          color: brandColors.textSecondary,
-          fontSize: 13,
-          display: 'block',
-          marginBottom: 8
-        }}>
-          Account
+    <Card
+      size="small"
+      title={
+        <Text style={{ color: '#faad14' }}>
+          <WarningOutlined style={{ marginRight: 8 }} />
+          Positions removed ({positions.length})
         </Text>
-        <Select
-          placeholder="Select account"
-          value={selectedAccount}
-          onChange={onSelectAccount}
-          size="large"
-          style={{ width: '100%' }}
-          showSearch
-          optionFilterProp="label"
-        >
-          {accounts.map(acc => (
-            <Option key={acc.id} value={acc.id} label={acc.name}>
-              <Space>
-                <Text style={{ color: '#fff' }}>{acc.name}</Text>
-                <Tag color="default" style={{ fontSize: 11 }}>
-                  {institutionName(acc.institution)}
-                </Tag>
+      }
+      style={{ borderColor: '#faad14', marginBottom: 16 }}
+      extra={
+        <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+          These were in your account but not in the imported file
+        </Text>
+      }
+    >
+      {positions.map((pos, i) => (
+        <div key={pos.ticker} style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 0',
+          borderBottom: i < positions.length - 1
+            ? `1px solid ${brandColors.darkBorder}`
+            : 'none',
+        }}>
+          <Space size={12}>
+            <Space direction="vertical" size={0}>
+              <Text style={{ color: '#fff', fontWeight: 600 }}>{pos.ticker}</Text>
+              <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>{pos.assetName}</Text>
+            </Space>
+            {pos.currentPrice && (
+              <Space direction="vertical" size={0}>
+                <Text style={{ color: '#fff', fontSize: 13 }}>
+                  {formatCurrency(pos.currentPrice)}
+                </Text>
+                <Text style={{ fontSize: 11, color: gainLossColor(pos.changePercent) }}>
+                  {formatPercent(pos.changePercent)}
+                </Text>
               </Space>
-            </Option>
-          ))}
-        </Select>
-      </div>
+            )}
+          </Space>
 
-      {/* File upload */}
-      <div style={{ marginBottom: 24 }}>
-        <Text style={{
-          color: brandColors.textSecondary,
-          fontSize: 13,
-          display: 'block',
-          marginBottom: 8
-        }}>
-          Export File
-        </Text>
-        <Dragger
-          accept=".csv,.qfx,.ofx"
-          maxCount={1}
-          fileList={file ? [file] : []}
-          beforeUpload={(f) => { onFileSelect(f); return false; }} // prevent auto-upload
-          onRemove={onRemoveFile}
-          style={{ background: brandColors.darkHover, borderColor: brandColors.darkBorder }}
-        >
-          <p style={{ margin: '16px 0 8px' }}>
-            <InboxOutlined style={{ fontSize: 36, color: brandColors.gold }} />
-          </p>
-          <p style={{ color: '#fff', fontSize: 14, margin: '0 0 4px' }}>
-            Click or drag file here
-          </p>
-          <p style={{ color: brandColors.textMuted, fontSize: 12, margin: 0 }}>
-            Accepted formats: CSV, QFX, OFX
-          </p>
-        </Dragger>
-      </div>
-
-      <Space>
-        <Button size="large" onClick={onBack}>
-          Back
-        </Button>
-        <Button
-          type="primary"
-          size="large"
-          icon={<UploadOutlined />}
-          disabled={!selectedAccount || !file}
-          loading={importing}
-          onClick={onImport}
-          style={{ fontWeight: 600 }}
-        >
-          {importing ? 'Importing...' : 'Import File'}
-        </Button>
-      </Space>
-    </div>
+          <Tooltip title="Add to watchlist to track this security">
+            <Button
+              size="small"
+              icon={<StarOutlined />}
+              loading={addingToWatchlist === pos.ticker}
+              onClick={() => onAddToWatchlist(pos)}
+              style={{ color: brandColors.gold, borderColor: brandColors.gold }}
+            >
+              Watch
+            </Button>
+          </Tooltip>
+        </div>
+      ))}
+    </Card>
   );
 };
 
 // =============================================================================
 // Step 3 — Results
 // =============================================================================
-const StepResults = ({ result, onImportAnother }) => {
+const StepResults = ({ result, onImportAnother, onAddToWatchlist, addingToWatchlist }) => {
   if (!result) return null;
 
   const isSuccess = result.status === 'success';
@@ -247,7 +320,6 @@ const StepResults = ({ result, onImportAnother }) => {
 
   return (
     <div style={{ maxWidth: 600 }}>
-      {/* Summary */}
       <Card style={{ borderColor: brandColors.darkBorder, marginBottom: 20 }}>
         <Space size={16} wrap>
           <div style={{ textAlign: 'center', minWidth: 80 }}>
@@ -255,11 +327,8 @@ const StepResults = ({ result, onImportAnother }) => {
             {isPartial && <WarningOutlined style={{ fontSize: 32, color: '#faad14' }} />}
             {isFailed  && <CloseCircleOutlined style={{ fontSize: 32, color: brandColors.loss }} />}
             <Text style={{
-              display: 'block',
-              marginTop: 4,
+              display: 'block', marginTop: 4, fontWeight: 600, textTransform: 'capitalize',
               color: isSuccess ? brandColors.gain : isPartial ? '#faad14' : brandColors.loss,
-              fontWeight: 600,
-              textTransform: 'capitalize',
             }}>
               {result.status}
             </Text>
@@ -269,33 +338,29 @@ const StepResults = ({ result, onImportAnother }) => {
 
           <Space size={24}>
             <div>
-              <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>
-                File
-              </Text>
+              <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>File</Text>
               <Text style={{ color: '#fff', fontSize: 13 }}>{result.filename}</Text>
             </div>
             <div>
-              <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>
-                Imported
-              </Text>
-              <Text style={{ color: brandColors.gain, fontSize: 18, fontWeight: 700 }}>
-                {result.rowsImported}
-              </Text>
+              <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Imported</Text>
+              <Text style={{ color: brandColors.gain, fontSize: 18, fontWeight: 700 }}>{result.rowsImported}</Text>
               <Text style={{ color: brandColors.textMuted, fontSize: 12 }}> positions</Text>
             </div>
             <div>
-              <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>
-                Skipped
-              </Text>
-              <Text style={{ color: brandColors.textSecondary, fontSize: 18, fontWeight: 700 }}>
-                {result.rowsSkipped}
-              </Text>
+              <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Skipped</Text>
+              <Text style={{ color: brandColors.textSecondary, fontSize: 18, fontWeight: 700 }}>{result.rowsSkipped}</Text>
             </div>
+            {result.removedPositions?.length > 0 && (
+              <div>
+                <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Removed</Text>
+                <Text style={{ color: '#faad14', fontSize: 18, fontWeight: 700 }}>
+                  {result.removedPositions.length}
+                </Text>
+              </div>
+            )}
             {result.errors?.length > 0 && (
               <div>
-                <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>
-                  Errors
-                </Text>
+                <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Errors</Text>
                 <Text style={{ color: brandColors.loss, fontSize: 18, fontWeight: 700 }}>
                   {result.errors.length}
                 </Text>
@@ -303,49 +368,36 @@ const StepResults = ({ result, onImportAnother }) => {
             )}
             {result.asOfDate && (
               <div>
-                <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>
-                  Data As Of
-                </Text>
-                <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
-                  {formatDate(result.asOfDate)}
-                </Text>
+                <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>Data As Of</Text>
+                <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>{formatDate(result.asOfDate)}</Text>
               </div>
             )}
           </Space>
         </Space>
       </Card>
 
-      {/* Errors detail */}
+      {/* Removed positions with watchlist option */}
+      <RemovedPositions
+        positions={result.removedPositions}
+        onAddToWatchlist={onAddToWatchlist}
+        addingToWatchlist={addingToWatchlist}
+      />
+
+      {/* Errors */}
       {result.errors?.length > 0 && (
         <Card
           size="small"
-          title={
-            <Text style={{ color: brandColors.loss }}>
-              <CloseCircleOutlined style={{ marginRight: 8 }} />
-              Errors ({result.errors.length})
-            </Text>
-          }
+          title={<Text style={{ color: brandColors.loss }}><CloseCircleOutlined style={{ marginRight: 8 }} />Errors ({result.errors.length})</Text>}
           style={{ borderColor: brandColors.darkBorder, marginBottom: 16 }}
         >
           {result.errors.map((err, i) => (
             <div key={i} style={{
               padding: '8px 0',
-              borderBottom: i < result.errors.length - 1
-                ? `1px solid ${brandColors.darkBorder}`
-                : 'none'
+              borderBottom: i < result.errors.length - 1 ? `1px solid ${brandColors.darkBorder}` : 'none'
             }}>
               <Space>
-                {err.ticker && (
-                  <Tag color="default" style={{ fontSize: 11 }}>{err.ticker}</Tag>
-                )}
-                <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
-                  {err.message}
-                </Text>
-                {err.type && (
-                  <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>
-                    [{err.type}]
-                  </Text>
-                )}
+                {err.ticker && <Tag color="default" style={{ fontSize: 11 }}>{err.ticker}</Tag>}
+                <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>{err.message}</Text>
               </Space>
             </div>
           ))}
@@ -368,20 +420,21 @@ const StepResults = ({ result, onImportAnother }) => {
 // Import Page
 // =============================================================================
 const Import = () => {
-  const [currentStep, setCurrentStep]       = useState(0);
-  const [importers, setImporters]           = useState([]);
-  const [accounts, setAccounts]             = useState([]);
+  const [currentStep, setCurrentStep]         = useState(0);
+  const [importers, setImporters]             = useState([]);
+  const [accounts, setAccounts]               = useState([]);
   const [selectedImporter, setSelectedImporter] = useState(null);
-  const [selectedAccount, setSelectedAccount]   = useState(null);
-  const [file, setFile]                     = useState(null);
-  const [importing, setImporting]           = useState(false);
-  const [result, setResult]                 = useState(null);
-  const [history, setHistory]               = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [loadError, setLoadError]           = useState(null);
-  const { message }                         = AntdApp.useApp();
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [file, setFile]                       = useState(null);
+  const [syncMode, setSyncMode]               = useState(true);
+  const [importing, setImporting]             = useState(false);
+  const [result, setResult]                   = useState(null);
+  const [history, setHistory]                 = useState([]);
+  const [historyLoading, setHistoryLoading]   = useState(true);
+  const [loadError, setLoadError]             = useState(null);
+  const [addingToWatchlist, setAddingToWatchlist] = useState(null);
+  const { message }                           = AntdApp.useApp();
 
-  // Load importers, accounts, and history on mount
   useEffect(() => {
     let cancelled = false;
 
@@ -397,7 +450,7 @@ const Import = () => {
           setAccounts(accountData.accounts.filter(a => a.is_active));
           setHistory(historyData.history || []);
         }
-      } catch  {
+      } catch {
         if (!cancelled) setLoadError('Failed to load import data');
       } finally {
         if (!cancelled) setHistoryLoading(false);
@@ -409,20 +462,19 @@ const Import = () => {
   }, []);
 
   const handleImport = async () => {
-    if (!file || !selectedImporter || !selectedAccount) return;
+    if (!file || !selectedImporter) return;
 
     setImporting(true);
     try {
-      const data = await importService.upload(file, selectedImporter, selectedAccount);
+      const data = await importService.upload(file, selectedImporter, selectedAccount, syncMode);
       setResult(data);
       setCurrentStep(2);
 
-      // Refresh history
       const historyData = await importService.getHistory();
       setHistory(historyData.history || []);
 
       if (data.status === 'success') {
-        message.success(`Imported ${data.rowsImported} positions successfully`);
+        message.success(`Imported ${data.rowsImported} positions`);
       } else if (data.status === 'partial') {
         message.warning(`Partial import: ${data.rowsImported} imported, ${data.errors?.length} errors`);
       } else {
@@ -435,12 +487,40 @@ const Import = () => {
     }
   };
 
+  const handleAddToWatchlist = async (position) => {
+    setAddingToWatchlist(position.ticker);
+    try {
+      await watchlistService.add(
+        position.ticker,
+        position.assetName,
+        position.assetType,
+        null,
+        'import_sync'
+      );
+      message.success(`${position.ticker} added to watchlist`);
+      // Remove from removed positions display
+      setResult(prev => ({
+        ...prev,
+        removedPositions: prev.removedPositions.filter(p => p.ticker !== position.ticker),
+      }));
+    } catch (err) {
+      if (err.response?.status === 409) {
+        message.info(`${position.ticker} is already on your watchlist`);
+      } else {
+        message.error('Failed to add to watchlist');
+      }
+    } finally {
+      setAddingToWatchlist(null);
+    }
+  };
+
   const handleImportAnother = () => {
     setCurrentStep(0);
     setSelectedImporter(null);
     setSelectedAccount(null);
     setFile(null);
     setResult(null);
+    setSyncMode(true);
   };
 
   const steps = [
@@ -449,9 +529,7 @@ const Import = () => {
     { title: 'Results'     },
   ];
 
-  if (loadError) {
-    return <Alert type="error" message={loadError} />;
-  }
+  if (loadError) return <Alert type="error" message={loadError} />;
 
   return (
     <div>
@@ -459,14 +537,8 @@ const Import = () => {
         Import Positions
       </Title>
 
-      {/* Wizard steps */}
       <Card style={{ borderColor: brandColors.darkBorder, marginBottom: 24 }}>
-        <Steps
-          current={currentStep}
-          items={steps}
-          style={{ marginBottom: 32 }}
-          size="small"
-        />
+        <Steps current={currentStep} items={steps} style={{ marginBottom: 32 }} size="small" />
 
         {currentStep === 0 && (
           <StepSelectInstitution
@@ -485,6 +557,8 @@ const Import = () => {
             file={file}
             onFileSelect={setFile}
             onRemoveFile={() => setFile(null)}
+            syncMode={syncMode}
+            onSyncModeChange={setSyncMode}
             onBack={() => setCurrentStep(0)}
             onImport={handleImport}
             importing={importing}
@@ -495,18 +569,17 @@ const Import = () => {
           <StepResults
             result={result}
             onImportAnother={handleImportAnother}
+            onAddToWatchlist={handleAddToWatchlist}
+            addingToWatchlist={addingToWatchlist}
           />
         )}
       </Card>
 
-      {/* Import history */}
       <Title level={5} style={{ color: brandColors.textSecondary, marginBottom: 12 }}>
         Import History
       </Title>
 
-      {historyLoading ? (
-        <Spin />
-      ) : (
+      {historyLoading ? <Spin /> : (
         <Table
           dataSource={history}
           columns={historyColumns}

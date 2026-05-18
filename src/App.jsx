@@ -4,6 +4,8 @@ import { AuthProvider } from "./store/authContext";
 import { useAuth } from "./store/useAuth";
 import { darkTheme, lightTheme } from "./theme";
 import ResetPassword from "./pages/ResetPassword";
+import Watchlist from './pages/Watchlist';
+
 
 import AppLayout from "./layouts/AppLayout";
 import Login from "./pages/Login";
@@ -60,6 +62,7 @@ const ThemedApp = () => {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="accounts" element={<Accounts />} />
               <Route path="import" element={<Import />} />
+              <Route path="watchlist" element={<Watchlist />} />
             </Route>
 
             {/* Catch-all */}

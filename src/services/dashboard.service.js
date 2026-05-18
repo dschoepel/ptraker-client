@@ -51,17 +51,18 @@ export const importService = {
     return response.data.importers;
   },
 
-  upload: async (file, importerId, accountId = null) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('importerId', importerId);
-    if (accountId) formData.append('accountId', accountId);
+  upload: async (file, importerId, accountId = null, syncMode = false) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('importerId', importerId);
+  if (accountId) formData.append('accountId', accountId);
+  formData.append('syncMode', String(syncMode));  // add this line
 
-    const response = await api.post('/import/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
-  },
+  const response = await api.post('/import/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+},
 
   getHistory: async () => {
     const response = await api.get('/import/history');
@@ -72,6 +73,30 @@ export const importService = {
 export const priceService = {
   refresh: async () => {
     const response = await api.post('/prices/refresh');
+    return response.data;
+  },
+};
+
+export const watchlistService = {
+  getAll: async () => {
+    const response = await api.get('/watchlist');
+    return response.data;
+  },
+
+  add: async (ticker, assetName, assetType, notes, addedFrom = 'manual') => {
+    const response = await api.post('/watchlist', {
+      ticker, assetName, assetType, notes, addedFrom
+    });
+    return response.data;
+  },
+
+  update: async (ticker, notes) => {
+    const response = await api.patch(`/watchlist/${ticker}`, { notes });
+    return response.data;
+  },
+
+  remove: async (ticker) => {
+    const response = await api.delete(`/watchlist/${ticker}`);
     return response.data;
   },
 };
