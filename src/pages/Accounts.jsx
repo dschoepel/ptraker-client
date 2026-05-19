@@ -23,7 +23,7 @@ import {
   StopOutlined,
 } from "@ant-design/icons";
 import { accountService } from "../services/dashboard.service";
-import { dashboardService } from "../services/dashboard.service";
+import { dashboardService, positionService } from "../services/dashboard.service";
 import {
   formatCurrency,
   formatPercent,
@@ -52,7 +52,7 @@ const GainLossText = ({ value, asPercent = false }) => {
 };
 
 // Expanded positions table shown when a row is expanded
-const PositionsTable = ({ positions, loading }) => {
+const PositionsTable = ({ positions, loading, onDeletePosition }) => {
   if (loading) return <Spin size="small" style={{ padding: 16 }} />;
   if (!positions || positions.length === 0) {
     return (
@@ -145,6 +145,29 @@ const PositionsTable = ({ positions, loading }) => {
         );
       },
     },
+    {
+  title: '',
+  key: 'actions',
+  width: 50,
+  align: 'center',
+  render: (_, record) => (
+    <Popconfirm
+      title={`Remove ${record.ticker}?`}
+      description="This will delete this position from the account."
+      onConfirm={() => onDeletePosition(record.id)}
+      okText="Delete"
+      cancelText="Cancel"
+      okButtonProps={{ danger: true }}
+    >
+      <Button
+        type="text"
+        icon={<DeleteOutlined />}
+        size="small"
+        danger
+      />
+    </Popconfirm>
+  ),
+},
   ];
 
   return (
@@ -391,6 +414,22 @@ useEffect(() => {
     }
   };
 
+  const handleDeletePosition = async (positionId) => {
+  try {
+    await positionService.remove(positionId);
+    message.success('Position removed');
+    // Clear cached positions so they reload on next expand
+    setPositions(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(k => { updated[k] = null; });
+      return updated;
+    });
+    triggerRefresh();
+  } catch {
+    message.error('Failed to remove position');
+  }
+};
+
   const openAdd = () => {
     setEditingAccount(null);
     setModalOpen(true);
@@ -611,6 +650,7 @@ useEffect(() => {
             <PositionsTable
               positions={positions[record.id]}
               loading={posLoading[record.id]}
+              onDeletePosition={handleDeletePosition}  // ← pass it as prop
             />
           ),
           rowExpandable: () => true,

@@ -10,7 +10,7 @@ Last updated: May 2026
 ## What This App Does
 
 portfolioTraker (ptraker) is a personal investment portfolio tracker frontend.
-Tracks $2M+ across 6 accounts (LPL brokerage/retirement, CFCU bank, Schwab).
+Tracks $2M+ across 8 accounts (LPL brokerage/retirement, CFCU bank, NJSD 403b/457).
 
 ---
 
@@ -92,7 +92,7 @@ src/
     Login.jsx               — email/password + forgot password
     ResetPassword.jsx       — PASSWORD_RECOVERY event pattern (not URL hash)
     Dashboard.jsx           — collapsible account sections, live prices
-    Accounts.jsx            — full CRUD + expandable positions
+    Accounts.jsx            — full CRUD + expandable positions + delete position
     Import.jsx              — 3-step wizard, file upload + manual entry
     Watchlist.jsx           — sparkline charts, symbol search autocomplete
   App.jsx                   — routing, theme, auth provider
@@ -181,44 +181,67 @@ Bank accounts (type: checking, savings) show `—` for Gain/Loss and Today:
   <ColoredValue value={account.total_gain_loss} />
 )}
 ```
-Apply in both `AccountPanelHeader` and `AccountPositionsTable` summary row.
+Apply in both `AccountPanelHeader` AND `AccountPositionsTable` summary row.
 
 ### Account Header Layout
-Name as bold text, institution as muted subtitle below — NOT as a tag beside name.
-maxWidth on name text to prevent overflow. gutter={[8, 0]} on Row.
+- Name as bold text, institution as muted subtitle below (NOT a tag)
+- `maxWidth` on name text to prevent overflow
+- `gutter={[8, 0]}` on Row
+
+---
+
+## Accounts Page — Key Details
+
+- Full CRUD with Popconfirm on delete
+- Expandable rows show positions (lazy loaded, cached per account_id)
+- `PositionsTable` receives `onDeletePosition` prop for per-position delete
+- `positionService.remove(id)` called from `handleDeletePosition`
+- After delete: clear position cache and trigger refresh
+- refreshKey pattern for reloading after mutations
+- Mobile view not yet implemented
 
 ---
 
 ## Import Page — Key Details
 
 ### Importer types
-- File importers: show file upload (Dragger)
-- Manual importer: `isManual: true` flag → show balance form instead
-- Step 2 switches based on `selectedImporterObj?.isManual`
+- File importers: show Dragger file upload
+- Manual importer: `isManual: true` → show balance/position form
 
-### Manual Entry flow
-- `POST /api/v1/import/manual` with JSON body (no file)
-- Always creates CASH position with balance as shares value
-- Used for bank accounts with no recent transaction history
+### Manual Entry — two modes
+**Cash Balance mode:**
+- Creates CASH position, balance = shares value, cost basis = 0
+
+**Fund/Stock mode:**
+- Ticker autocomplete via `/watchlist/search?q=` (same as watchlist)
+- Selecting result auto-fills asset name
+- Enter market value → shares back-calculated from current price
+- Enter cost basis from statement
+- After save, price cache refreshed automatically (no manual refresh needed)
 
 ### importService methods
 ```javascript
 importService.upload(file, importerId, accountId, syncMode)
-importService.manualEntry(accountId, ticker, balance, assetName, assetType)
+importService.manualEntry(accountId, ticker, balance, assetName, assetType,
+                          marketValue, shares, costBasis, name, defaultAssetType)
 importService.getImporters()  // includes isManual flag
 importService.getHistory()
 ```
+
+### Sync-delete
+- Checkbox in Step 2 (default on)
+- Results show removed positions with Watch button
+- `watchlistService.add()` called with `addedFrom: 'import_sync'`
 
 ---
 
 ## Watchlist — Key Details
 
-- Sparkline: AreaChart (recharts), 30-day data from `/watchlist/:ticker/history`
-- Green line if price up over period, red if down
-- YAxis domain padded to amplify small movements
-- Symbol search: AutoComplete + `/watchlist/search?q=` 
+- Sparkline: AreaChart (recharts), 30-day from `/watchlist/:ticker/history`
+- Green line if up, red if down; YAxis padded to amplify small moves
+- Symbol search: AutoComplete + `/watchlist/search?q=`
   Uses yahoo-finance2 `search` module (autoc is decomissioned)
-- added_from: 'manual' | 'import_sync'
+- `added_from`: 'manual' | 'import_sync'
 
 ---
 
@@ -241,23 +264,25 @@ Mobile bottom tab bar maps over navItems automatically.
 |---|---|---|
 | Login | ✅ | |
 | Reset Password | ✅ | PASSWORD_RECOVERY event |
-| Dashboard | ✅ | Collapsible, live prices, last import, cash account rules |
-| Accounts | ✅ | Full CRUD, expandable positions |
-| Import | ✅ | File + manual entry, sync-delete, watchlist integration |
+| Dashboard | ✅ | Collapsible, live prices, cash account rules |
+| Accounts | ✅ | Full CRUD, expandable positions, delete position |
+| Import | ✅ | File + manual (cash/fund), sync-delete, watchlist |
 | Watchlist | ✅ | Sparklines, symbol autocomplete |
 | Profile/Settings | 🔜 | |
-| Admin/User Mgmt | 🔜 | Invite family members |
+| Admin/User Mgmt | 🔜 | Invite family members — next priority |
 
 ---
 
-## TODO
+## Known Issues / TODO
 
-- [ ] User invite flow
-- [ ] Portfolio sharing (view-only)
-- [ ] Email templates branding
+- [ ] User invite flow (admin invites family members by email) ← NEXT
+- [ ] Portfolio sharing (view-only access between users) ← NEXT
+- [ ] Email templates branding (Studio skeleton issue)
 - [ ] OTP code entry for password reset
 - [ ] Mobile view for Accounts page
 - [ ] Profile/settings page
-- [ ] Data export
+- [ ] Data export (download all user data)
 - [ ] Account deletion with confirmation
-- [ ] Production deployment
+- [ ] System theme change at runtime not reactive
+- [ ] No error boundary component
+- [ ] Production deployment (Jupiter VPS + ptraker.com)

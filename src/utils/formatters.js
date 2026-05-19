@@ -83,13 +83,15 @@ export const formatDateTime = (value) => {
 // Map institution key to display name
 export const institutionName = (key) => {
   const map = {
-    lpl:     'LPL Financial',
-    merrill: 'Merrill Lynch',
-    schwab:  'Schwab',
-    cfcu:    'Community First CU',
-    bank:    'Bank',
-    manual:  'Manual Entry',
-  };
+  lpl:        'LPL Financial',
+  merrill:    'Merrill Lynch',
+  schwab:     'Schwab',
+  cfcu:       'Community First CU',
+  associated: 'Associated Bank',
+  bank:       'Bank',
+  manual:     'Manual Entry',
+  other:      'Other',
+};
   return map[key?.toLowerCase()] || key || '—';
 };
 

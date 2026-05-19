@@ -4,7 +4,7 @@ React frontend for **portfolioTraker** — a personal investment portfolio track
 
 ## Overview
 
-Tracks $2M+ across 6 accounts (LPL brokerage/retirement, CFCU bank, Schwab).
+Tracks $2M+ across 8 accounts (LPL brokerage/retirement, CFCU bank, NJSD 403b/457).
 Built as a private family application with role-based access.
 
 ## Tech Stack
@@ -50,14 +50,17 @@ npm run build   # production → dist/
 
 - Dark/light mode (system preference)
 - Responsive — desktop sidebar + mobile bottom tab bar
-- Dashboard with collapsible account sections and last import timestamp
-- Cash accounts show `—` for gain/loss (not misleading green)
+- Dashboard with collapsible account sections, last import timestamp
+- Cash accounts show `—` for gain/loss (not misleading)
 - Real-time price refresh via Yahoo Finance
 - Full account management (create, edit, deactivate, delete)
-- Import wizard: CSV/QFX file upload + manual balance entry
-- Sync-delete: removes positions no longer in export file
+- Delete individual positions from account
+- Import wizard:
+  - CSV/QFX file upload with sync-delete
+  - Manual cash balance entry
+  - Manual fund/stock entry by market value (shares back-calculated)
+  - Ticker autocomplete via Yahoo Finance symbol search
 - Watchlist with 30-day sparkline charts
-- Yahoo Finance symbol autocomplete search
 - Password reset via email
 
 ## Pages
@@ -70,6 +73,15 @@ npm run build   # production → dist/
 | Accounts | `/accounts` |
 | Import | `/import` |
 | Watchlist | `/watchlist` |
+
+## Supported Institutions
+
+| Institution | Method |
+|---|---|
+| LPL Financial | CSV export |
+| Community First CU | CSV transaction history |
+| Associated Bank (NJSD plans) | Manual entry by market value |
+| Any cash account | Manual balance entry |
 
 ## Production
 
