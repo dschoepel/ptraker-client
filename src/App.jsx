@@ -4,14 +4,32 @@ import { AuthProvider } from "./store/authContext";
 import { useAuth } from "./store/useAuth";
 import { darkTheme, lightTheme } from "./theme";
 import ResetPassword from "./pages/ResetPassword";
-import Watchlist from './pages/Watchlist';
-
+import Watchlist from "./pages/Watchlist";
+import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
+import SetPassword from "./pages/SetPassword";
 
 import AppLayout from "./layouts/AppLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
 import Import from "./pages/Import";
+
+// Detect invite token in URL hash BEFORE routing
+// Must happen here so we can redirect before ProtectedRoute fires
+const hash = window.location.hash;
+if (hash) {
+  const params = new URLSearchParams(hash.substring(1));
+  const accessToken  = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  const type         = params.get('type');
+
+  if (accessToken && type === 'invite') {
+    localStorage.setItem('ptraker_token', accessToken);
+    if (refreshToken) localStorage.setItem('ptraker_refresh_token', refreshToken);
+    window.history.replaceState(null, '', '/set-password');
+  }
+}
 
 // =============================================================================
 // ProtectedRoute — redirects to login if not authenticated
@@ -48,6 +66,7 @@ const ThemedApp = () => {
             {/* Public route */}
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/set-password" element={<SetPassword />} />
 
             {/* Protected routes — wrapped in AppLayout */}
             <Route
@@ -63,6 +82,8 @@ const ThemedApp = () => {
               <Route path="accounts" element={<Accounts />} />
               <Route path="import" element={<Import />} />
               <Route path="watchlist" element={<Watchlist />} />
+              <Route path="admin" element={<Admin />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
 
             {/* Catch-all */}

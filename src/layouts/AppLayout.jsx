@@ -8,6 +8,8 @@ import {
   LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, StarOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../store/useAuth';
+import { SettingOutlined, SafetyOutlined } from '@ant-design/icons';
+
 
 // import { App as AntdApp } from 'antd';
 import { brandColors } from '../theme';
@@ -16,15 +18,6 @@ const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
-// =============================================================================
-// Nav items
-// =============================================================================
-const navItems = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
-  { key: '/accounts',  icon: <BankOutlined />,      label: 'Accounts'  },
-  { key: '/import',    icon: <UploadOutlined />,     label: 'Import'    },
-  { key: '/watchlist', icon: <StarOutlined />,       label: 'Watchlist' },
-];
 
 // =============================================================================
 // Logo — defined OUTSIDE AppLayout so it is not recreated on every render
@@ -89,6 +82,23 @@ const AppLayout = () => {
   const screens                     = useBreakpoint();
   const { token: designToken }      = theme.useToken();
   // const { message }                 = AntdApp.useApp();
+
+  const isAdmin = user?.role === 'admin' || user?.user_metadata?.role === 'admin';
+  const isViewer = user?.role === 'viewer' || user?.user_metadata?.role === 'viewer';
+
+  // =============================================================================
+  // Nav items
+  // =============================================================================
+  const navItems = [
+  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+  ...(!isViewer ? [
+    { key: '/accounts',  icon: <BankOutlined />,   label: 'Accounts' },
+    { key: '/import',    icon: <UploadOutlined />,  label: 'Import'   },
+  ] : []),
+  { key: '/watchlist', icon: <StarOutlined />,      label: 'Watchlist' },
+  { key: '/profile',   icon: <SettingOutlined />,   label: 'Settings'  },
+  ...(isAdmin ? [{ key: '/admin', icon: <SafetyOutlined />, label: 'Admin' }] : []),
+];
 
   const isMobile = !screens.md;
 

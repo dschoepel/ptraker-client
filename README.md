@@ -5,7 +5,7 @@ React frontend for **portfolioTraker** — a personal investment portfolio track
 ## Overview
 
 Tracks $2M+ across 8 accounts (LPL brokerage/retirement, CFCU bank, NJSD 403b/457).
-Built as a private family application with role-based access.
+Multi-user with role-based access (admin/user/viewer) and portfolio sharing.
 
 ## Tech Stack
 
@@ -50,38 +50,39 @@ npm run build   # production → dist/
 
 - Dark/light mode (system preference)
 - Responsive — desktop sidebar + mobile bottom tab bar
-- Dashboard with collapsible account sections, last import timestamp
-- Cash accounts show `—` for gain/loss (not misleading)
+- Role-based navigation (viewer sees fewer options)
+- Dashboard with collapsible account sections
+- Shared portfolio tabs (viewer can see owner's portfolio)
 - Real-time price refresh via Yahoo Finance
-- Full account management (create, edit, deactivate, delete)
-- Delete individual positions from account
-- Import wizard:
-  - CSV/QFX file upload with sync-delete
-  - Manual cash balance entry
-  - Manual fund/stock entry by market value (shares back-calculated)
-  - Ticker autocomplete via Yahoo Finance symbol search
+- Full account management (admin/user only)
+- Import wizard: CSV/QFX + manual balance/position entry
+- Sync-delete with watchlist integration
 - Watchlist with 30-day sparkline charts
-- Password reset via email
+- Admin: invite users, manage roles, notification settings (Ntfy + email)
+- Profile: share portfolio, request upgrade, delete account
+- Password reset + invite acceptance flows
+
+## User Roles
+
+| Role | Accounts | Import | Watchlist | Settings | Admin |
+|---|---|---|---|---|---|
+| admin | ✅ | ✅ | ✅ | ✅ | ✅ |
+| user | ✅ | ✅ | ✅ | ✅ | ❌ |
+| viewer | ❌ | ❌ | ✅ | ✅ | ❌ |
 
 ## Pages
 
-| Page | Path |
-|---|---|
-| Login | `/login` |
-| Reset Password | `/reset-password` |
-| Dashboard | `/dashboard` |
-| Accounts | `/accounts` |
-| Import | `/import` |
-| Watchlist | `/watchlist` |
-
-## Supported Institutions
-
-| Institution | Method |
-|---|---|
-| LPL Financial | CSV export |
-| Community First CU | CSV transaction history |
-| Associated Bank (NJSD plans) | Manual entry by market value |
-| Any cash account | Manual balance entry |
+| Page | Path | Access |
+|---|---|---|
+| Login | `/login` | Public |
+| Reset Password | `/reset-password` | Public |
+| Set Password | `/set-password` | Public (invite flow) |
+| Dashboard | `/dashboard` | All roles |
+| Accounts | `/accounts` | admin, user |
+| Import | `/import` | admin, user |
+| Watchlist | `/watchlist` | All roles |
+| Profile/Settings | `/profile` | All roles |
+| Admin | `/admin` | admin only |
 
 ## Production
 
