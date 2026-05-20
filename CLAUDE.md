@@ -11,7 +11,7 @@ Last updated: May 2026
 
 portfolioTraker (ptraker) is a personal investment portfolio tracker frontend.
 Tracks $2M+ across 8 accounts (LPL brokerage/retirement, CFCU bank, NJSD 403b/457).
-Supports multi-user with role-based access and portfolio sharing.
+Multi-user with role-based access (admin/user/viewer) and portfolio sharing.
 
 ---
 
@@ -91,15 +91,19 @@ src/
   layouts/
     AppLayout.jsx           — sidebar (desktop) + bottom tab bar (mobile)
                               nav items filtered by role (viewer hides Accounts/Import)
+                              username click → /profile, avatar click → dropdown (Sign out)
   pages/
-    Login.jsx               — email/password + forgot password
-    ResetPassword.jsx       — PASSWORD_RECOVERY event pattern
+    Login.jsx               — three modes: login / forgot / otp
+    ResetPassword.jsx       — handles both OTP path and email link (PASSWORD_RECOVERY)
     SetPassword.jsx         — new user invite acceptance + password setup
-    Dashboard.jsx           — collapsible accounts, shared portfolio tabs
+    Dashboard.jsx           — collapsible accounts, shared portfolio tabs,
+                              filter panel (institution, account, sort)
     Accounts.jsx            — full CRUD + expandable positions + delete position
+                              column sorts: name, institution, type
     Import.jsx              — 3-step wizard, file + manual entry
     Watchlist.jsx           — sparkline charts, symbol search
-    Profile.jsx             — profile, portfolio sharing, upgrade request
+    Profile.jsx             — profile, privacy toggle, portfolio sharing,
+                              upgrade request, delete account with data export
     Admin.jsx               — user management, invite, role requests, notifications
   App.jsx                   — routing, theme, auth provider
                               invite token detection at module level
@@ -121,8 +125,19 @@ Three files to avoid Fast Refresh warnings:
 const [token, setToken] = useState(() => localStorage.getItem('ptraker_token') || null);
 ```
 
+### Password Reset — Three modes in Login.jsx
+- `login` — email + password
+- `forgot` — enter email → calls Express API `/auth/forgot-password`
+  API uses `generateLink` + nodemailer (GoTrue silently skips emails)
+  Email contains branded HTML with Reset button + 6-digit OTP code
+- `otp` — enter 6-digit code → `supabaseAuth.auth.verifyOtp()` → navigate to /reset-password
+
+### ResetPassword.jsx — Two paths
+- **OTP path:** token in localStorage from verifyOtp → `setSession()` → show form
+- **Email link path:** listen for `PASSWORD_RECOVERY` event from supabaseAuth
+
 ### Invite Token Detection
-At module level in `App.jsx` (before React renders) — detects `type=invite` in URL hash:
+Module-level in `App.jsx` (before React renders):
 ```javascript
 const hash = window.location.hash;
 if (hash) {
@@ -135,17 +150,9 @@ if (hash) {
 }
 ```
 
-### Reset Password
-Listens for `PASSWORD_RECOVERY` event on `supabaseAuth` — do NOT parse URL hash.
-
-### Set Password (invite flow)
-`SetPassword.jsx` calls `supabaseAuth.auth.setSession()` to establish session from
-localStorage token, then `supabaseAuth.auth.updateUser({ password })`.
-
 ### Dev Email Issues
-- Password reset links: `https://10.0.10.60` → change to `http://10.0.10.60:8100`
-- Invite emails: sent via nodemailer in Express API (GoTrue v2.186 silently skips invite emails)
-  Link fix applied in `admin.controller.js`: `.replace(/^https:\/\/10\.0\.10\.60\//, 'http://10.0.10.60:8100/')`
+- Password reset/invite links: `https://10.0.10.60` → change to `http://10.0.10.60:8100`
+- Fixed in `admin.controller.js` and `auth.controller.js` with `.replace()`
 
 ---
 
@@ -167,7 +174,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 | user | ✅ | ✅ | ✅ | ✅ | ❌ | Own + shared |
 | viewer | ❌ | ❌ | ✅ | ✅ | ❌ | Empty state + shared |
 
-Nav items filtered in `AppLayout.jsx`:
+### Nav filtering in AppLayout.jsx
 ```javascript
 const isAdmin  = user?.role === 'admin'  || user?.user_metadata?.role === 'admin';
 const isViewer = user?.role === 'viewer' || user?.user_metadata?.role === 'viewer';
@@ -180,7 +187,7 @@ const isViewer = user?.role === 'viewer' || user?.user_metadata?.role === 'viewe
 **Never define components inside other components.**
 **Never call setState synchronously in useEffect — wrap in async function.**
 **Never use Date.now() in render — use new Date().getTime().**
-**Use useCallback for functions used in useEffect dependency arrays.**
+**Use useCallback for functions in useEffect dependency arrays.**
 
 ### refreshKey pattern:
 ```javascript
@@ -207,35 +214,60 @@ useEffect(() => {
 ## Dashboard — Key Details
 
 - Loads own dashboard + shares list in parallel on mount
-- Shows tabs when user has shared portfolios to view
-- Viewers with no own accounts: "My Portfolio" shows empty state with Request Upgrade button
-- Auto-switches to first shared tab if viewer has no own accounts
-- `PortfolioView` component is reusable for both own and shared portfolios
+- Shows tabs when user has shared portfolios
+- Viewers with no own accounts: empty state with Request Upgrade button, auto-switches to first shared tab
+- `PortfolioView` reusable for own and shared portfolios
 - `readOnly=true` on shared views hides Refresh Prices button
-- Cash accounts (checking/savings) show `—` for Gain/Loss and Today
+- `isOwn=true` + `isViewer=true` + no accounts → empty state
 
-### daysSince calculation
-```javascript
-const daysSince = account.last_imported_at
-  ? Math.floor(
-      (new Date().getTime() - new Date(account.last_imported_at).getTime())
-      / (1000 * 60 * 60 * 24)
-    )
-  : null;
-```
+### Filter Panel (in PortfolioView)
+- Sort by: Value desc, Gain/Loss desc, Name asc
+- Filter by institution (checkboxes)
+- Filter by account (checkboxes — filtered by selected institutions)
+- When institution deselected, clears accounts from that institution
+- Filter button turns gold when active, shows "Filtered" label
+- Clear filters button resets all
+
+### Cash Account Display Rules
+Checking/savings accounts show `—` for Gain/Loss and Today in both header and summary row.
+
+---
+
+## Accounts Page
+
+- Full CRUD with Popconfirm on delete
+- Expandable rows show positions (lazy loaded)
+- Delete individual positions via `positionService.remove(id)`
+- Column sorts: name (`a.name`), institution (`institutionName(a.institution)`), type (`a.type` not `a.account_type`)
+- `showSorterTooltip={false}` on Table
+
+---
+
+## Profile / Settings Page
+
+- Display name edit
+- Privacy toggle: `discoverable` field — controls visibility in sharing dropdown
+- Portfolio Sharing:
+  - "Existing user" mode: dropdown of discoverable users (name only, not email)
+  - "Invite someone new" mode: email input → auto-invite as viewer + share created
+- Request Upgrade section (viewers only)
+- Delete Account flow:
+  1. Modal opens with Download My Data button
+  2. Checkbox: "I understand this cannot be undone"
+  3. Delete button only enabled after checkbox checked
+  4. Download exports JSON via `GET /api/v1/user/export`
 
 ---
 
 ## Admin Page
 
-- User list with role change dropdown and delete button
+- User list with role change dropdown and delete (trash) button
 - Cannot delete self or last admin
 - Invite user modal (email + role)
 - Role upgrade requests with approve/deny
-- Notification settings (Ntfy + Email) with collapsible panels and Send test button
+- Notification settings: Ntfy + Email, collapsible panels, Send test button
 
-### Notification Settings
-Stored in `profiles.notification_settings` JSONB:
+### Notification Settings stored in profiles.notification_settings JSONB:
 ```json
 {
   "ntfy":  {"enabled": true, "url": "https://ntfy.schoepels.com", "topic": "ptraker", "token": ""},
@@ -245,52 +277,12 @@ Stored in `profiles.notification_settings` JSONB:
 
 ---
 
-## Profile / Settings Page
-
-- Display name edit
-- Role badge
-- Request Upgrade section (viewers only) — submits to `/api/v1/user/request-upgrade`
-- Portfolio Sharing — share with others by email, see portfolios shared with you
-- Danger Zone — Delete My Account with Popconfirm
-
----
-
-## Import Page — Key Details
+## Import Page
 
 ### Manual Entry modes
-- **Cash Balance** — creates CASH position
+- **Cash Balance** — CASH position, balance = shares, cost basis = 0
 - **Fund/Stock** — ticker autocomplete, market value → shares back-calculated,
-  price auto-refreshed after save
-
-### importService methods
-```javascript
-importService.upload(file, importerId, accountId, syncMode)
-importService.manualEntry(accountId, ticker, balance, assetName, assetType,
-                          marketValue, shares, costBasis, name, defaultAssetType)
-```
-
----
-
-## Watchlist
-
-- Sparkline: AreaChart, 30-day, green/red based on period direction
-- Symbol search: AutoComplete + `/watchlist/search?q=` (yahoo `search` module)
-- `added_from`: 'manual' | 'import_sync'
-
----
-
-## Nav Items
-
-```javascript
-{ key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
-...(!isViewer ? [
-  { key: '/accounts', icon: <BankOutlined />,   label: 'Accounts' },
-  { key: '/import',   icon: <UploadOutlined />,  label: 'Import'   },
-] : []),
-{ key: '/watchlist', icon: <StarOutlined />,     label: 'Watchlist' },
-{ key: '/profile',   icon: <SettingOutlined />,  label: 'Settings'  },
-...(isAdmin ? [{ key: '/admin', icon: <SafetyOutlined />, label: 'Admin' }] : []),
-```
+  price auto-refreshed after save, cost basis from statement
 
 ---
 
@@ -298,25 +290,22 @@ importService.manualEntry(accountId, ticker, balance, assetName, assetType,
 
 | Page | Status | Notes |
 |---|---|---|
-| Login | ✅ | |
-| Reset Password | ✅ | PASSWORD_RECOVERY event |
-| Set Password | ✅ | Invite acceptance flow |
-| Dashboard | ✅ | Tabs for shared portfolios, viewer empty state |
-| Accounts | ✅ | Full CRUD, expandable positions, delete position |
-| Import | ✅ | File + manual (cash/fund), sync-delete, watchlist |
-| Watchlist | ✅ | Sparklines, symbol autocomplete |
-| Profile/Settings | ✅ | Sharing, upgrade request, delete account |
-| Admin | ✅ | User mgmt, invite, role requests, notifications |
+| Login | ✅ | Three modes: login/forgot/otp |
+| Reset Password | ✅ | OTP + email link paths |
+| Set Password | ✅ | Invite acceptance |
+| Dashboard | ✅ | Tabs, filter panel, viewer empty state |
+| Accounts | ✅ | CRUD, positions, column sorts |
+| Import | ✅ | File + manual, sync-delete |
+| Watchlist | ✅ | Sparklines, symbol search |
+| Profile/Settings | ✅ | Privacy, sharing, export, delete |
+| Admin | ✅ | Users, invite, roles, notifications |
 
 ---
 
-## Known Issues / TODO
+## TODO
 
-- [ ] OTP code entry for password reset
 - [ ] Mobile view for Accounts page
 - [ ] Merrill Lynch CSV importer
 - [ ] Schwab CSV importer
 - [ ] LPL QFX importer
-- [ ] System theme change at runtime not reactive
-- [ ] No error boundary component
 - [ ] Production deployment (Jupiter VPS + ptraker.com)

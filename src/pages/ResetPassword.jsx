@@ -10,73 +10,85 @@ const { Title, Text, Link } = Typography;
 // =============================================================================
 // Reset Password Page
 // =============================================================================
-// Handles the password reset flow after user clicks the email link.
-//
-// Flow:
-//   1. User clicks link in email → Supabase verifies token → redirects here
-//   2. Supabase fires PASSWORD_RECOVERY auth state event
-//   3. We listen for that event and show the password form
-//   4. User sets new password → we call supabaseAuth.auth.updateUser()
+// Two entry paths:
+//   1. OTP code    — session already in localStorage from verifyOtp in Login.jsx
+//   2. Email link  — Supabase fires PASSWORD_RECOVERY auth event
 // =============================================================================
 
 const ResetPassword = () => {
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState(null);
-  const [success, setSuccess]     = useState(false);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState(null);
+  const [success, setSuccess]       = useState(false);
   const [tokenReady, setTokenReady] = useState(false);
-  const navigate                  = useNavigate();
-  const [form]                    = Form.useForm();
-  const { message }               = AntdApp.useApp();
+  const navigate                    = useNavigate();
+  const [form]                      = Form.useForm();
+  const { message }                 = AntdApp.useApp();
 
-  // Listen for Supabase PASSWORD_RECOVERY auth state event
-  // This fires when Supabase has verified the recovery token and
-  // established a session — replaces the old URL hash approach
   useEffect(() => {
-    let timeoutId;
+    let subscription = null;
+    let timeoutId    = null;
 
-    const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(
-      (event) => {
+    const establish = async () => {
+      // Path 1: OTP flow — token already in localStorage from verifyOtp
+      const storedToken   = localStorage.getItem('ptraker_token');
+      const storedRefresh = localStorage.getItem('ptraker_refresh_token');
+
+      if (storedToken) {
+        const { data, error: sessionError } = await supabaseAuth.auth.setSession({
+          access_token:  storedToken,
+          refresh_token: storedRefresh || storedToken,
+        });
+
+        if (!sessionError && data?.user) {
+          setTokenReady(true);
+          return;
+        }
+      }
+
+      // Path 2: Email link — listen for PASSWORD_RECOVERY event
+      const { data } = supabaseAuth.auth.onAuthStateChange((event) => {
         if (event === 'PASSWORD_RECOVERY') {
           setTokenReady(true);
           clearTimeout(timeoutId);
         }
-      }
-    );
-
-    // If no PASSWORD_RECOVERY event after 4 seconds — invalid or expired link
-    timeoutId = setTimeout(() => {
-      setTokenReady(prev => {
-        if (!prev) {
-          setError('Invalid or expired reset link. Please request a new one.');
-        }
-        return prev;
       });
-    }, 4000);
+      subscription = data.subscription;
 
-    // Cleanup subscription and timeout when component unmounts
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeoutId);
+      // Timeout — 4 seconds then show error
+      timeoutId = setTimeout(() => {
+        setTokenReady(prev => {
+          if (!prev) setError('Invalid or expired reset link. Please request a new one.');
+          return prev;
+        });
+      }, 4000);
     };
-  }, []); // Empty array — run once on mount, subscribing to external system
+
+    establish();
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
 
   const handleSubmit = async (values) => {
     setLoading(true);
     setError(null);
     try {
-      // Supabase session is already established by PASSWORD_RECOVERY event
-      // Just update the password directly
       const { error: updateError } = await supabaseAuth.auth.updateUser({
         password: values.password,
       });
 
       if (updateError) throw updateError;
 
+      // Clear stored tokens — user will log in fresh
+      localStorage.removeItem('ptraker_token');
+      localStorage.removeItem('ptraker_user');
+      localStorage.removeItem('ptraker_refresh_token');
+
       setSuccess(true);
       message.success('Password updated successfully');
-
-      // Redirect to login after 3 seconds
-      setTimeout(() => navigate('/login'), 3000);
+      setTimeout(() => navigate('/login'), 2500);
 
     } catch (err) {
       setError(err.message || 'Failed to reset password. Please try again.');
@@ -85,25 +97,19 @@ const ResetPassword = () => {
     }
   };
 
-  // ============================================================
   // Success state
-  // ============================================================
   if (success) {
     return (
       <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: brandColors.darkBg,
-        padding: 24,
+        minHeight: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', background: brandColors.darkBg, padding: 24,
       }}>
         <Result
           icon={<CheckCircleOutlined style={{ color: brandColors.gold }} />}
           title={<span style={{ color: '#fff' }}>Password updated</span>}
           subTitle={
             <span style={{ color: brandColors.textSecondary }}>
-              Your password has been changed successfully. Redirecting to sign in...
+              Your password has been changed. Redirecting to sign in...
             </span>
           }
           extra={
@@ -119,29 +125,19 @@ const ResetPassword = () => {
 
   return (
     <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: brandColors.darkBg,
-      padding: 24,
+      minHeight: '100vh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', background: brandColors.darkBg, padding: 24,
     }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <div style={{
-            width: 64,
-            height: 64,
-            borderRadius: '50%',
+            width: 64, height: 64, borderRadius: '50%',
             background: brandColors.darkCard,
             border: `2px solid ${brandColors.darkBorder}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px',
-            fontSize: 22,
-            fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px', fontSize: 22, fontWeight: 700,
           }}>
             <span style={{ color: '#fff' }}>p</span>
             <span style={{ color: brandColors.gold }}>T</span>
@@ -155,17 +151,14 @@ const ResetPassword = () => {
         <div style={{
           background: brandColors.darkCard,
           border: `1px solid ${brandColors.darkBorder}`,
-          borderRadius: 12,
-          padding: 32,
+          borderRadius: 12, padding: 32,
         }}>
           <Title level={4} style={{ color: '#fff', marginBottom: 8, marginTop: 0 }}>
             Set new password
           </Title>
           <Text style={{
-            color: brandColors.textSecondary,
-            fontSize: 13,
-            display: 'block',
-            marginBottom: 24,
+            color: brandColors.textSecondary, fontSize: 13,
+            display: 'block', marginBottom: 24,
           }}>
             Choose a strong password for your account.
           </Text>
@@ -201,7 +194,7 @@ const ResetPassword = () => {
                 label={<span style={{ color: brandColors.textSecondary }}>New Password</span>}
                 rules={[
                   { required: true, message: 'Password is required' },
-                  { min: 8, message: 'Password must be at least 8 characters' },
+                  { min: 8, message: 'At least 8 characters' },
                 ]}
               >
                 <Input.Password
@@ -255,11 +248,8 @@ const ResetPassword = () => {
         </div>
 
         <Text style={{
-          display: 'block',
-          textAlign: 'center',
-          marginTop: 16,
-          color: brandColors.textMuted,
-          fontSize: 12,
+          display: 'block', textAlign: 'center', marginTop: 16,
+          color: brandColors.textMuted, fontSize: 12,
         }}>
           <Link onClick={() => navigate('/login')} style={{ color: brandColors.textMuted }}>
             ← Back to sign in

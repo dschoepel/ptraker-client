@@ -41,9 +41,9 @@ export const adminService = {
     return response.data;
   },
   deleteUser: async (id) => {
-  const response = await api.delete(`/admin/users/${id}`);
-  return response.data;
-},
+    const response = await api.delete(`/admin/users/${id}`);
+    return response.data;
+  },
 };
 
 export const sharesService = {
@@ -52,8 +52,13 @@ export const sharesService = {
     return response.data;
   },
 
-  createShare: async (viewerEmail, label) => {
-    const response = await api.post('/shares', { viewerEmail, label });
+  getDiscoverableUsers: async () => {
+    const response = await api.get('/shares/discoverable-users');
+    return response.data;
+  },
+
+  createShare: async (viewerId, viewerEmail, label) => {
+    const response = await api.post('/shares', { viewerId, viewerEmail, label });
     return response.data;
   },
 

@@ -1,21 +1,45 @@
-import { useState, useEffect,useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 import {
-  Row, Col, Card, Statistic, Table, Tag, Typography,
-  Spin, Alert, Grid, Space, Collapse, Tabs, App as AntdApp,
-  Button
-} from 'antd';
+  Row,
+  Col,
+  Card,
+  Statistic,
+  Table,
+  Tag,
+  Typography,
+  Spin,
+  Alert,
+  Grid,
+  Space,
+  Collapse,
+  Tabs,
+  App as AntdApp,
+  Button,
+  Checkbox,
+  Select,
+} from "antd";
 import {
-  ArrowUpOutlined, ArrowDownOutlined, MinusOutlined,
-  RightOutlined, ReloadOutlined, CrownOutlined
-} from '@ant-design/icons';
-import { dashboardService, priceService } from '../services/dashboard.service';
-import { sharesService } from '../services/admin.service';
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  MinusOutlined,
+  RightOutlined,
+  ReloadOutlined,
+  CrownOutlined,
+  FilterOutlined,
+} from "@ant-design/icons";
+import { dashboardService, priceService } from "../services/dashboard.service";
+import { sharesService } from "../services/admin.service";
 import {
-  formatCurrency, formatPercent, formatShares,
-  formatDateTime, gainLossColor, institutionName,
-  assetTypeName
-} from '../utils/formatters';
-import { brandColors } from '../theme';
+  formatCurrency,
+  formatPercent,
+  formatShares,
+  formatDateTime,
+  gainLossColor,
+  institutionName,
+  assetTypeName,
+} from "../utils/formatters";
+import { brandColors } from "../theme";
+import { useAuth } from "../store/useAuth";
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -25,14 +49,17 @@ const { useBreakpoint } = Grid;
 // =============================================================================
 
 const GainLossIndicator = ({ value }) => {
-  if (value === null || value === undefined) return <MinusOutlined style={{ color: brandColors.neutral }} />;
+  if (value === null || value === undefined)
+    return <MinusOutlined style={{ color: brandColors.neutral }} />;
   if (value > 0) return <ArrowUpOutlined style={{ color: brandColors.gain }} />;
-  if (value < 0) return <ArrowDownOutlined style={{ color: brandColors.loss }} />;
+  if (value < 0)
+    return <ArrowDownOutlined style={{ color: brandColors.loss }} />;
   return <MinusOutlined style={{ color: brandColors.neutral }} />;
 };
 
 const ColoredValue = ({ value, formatter = formatCurrency }) => {
-  if (value === null || value === undefined) return <span style={{ color: brandColors.neutral }}>—</span>;
+  if (value === null || value === undefined)
+    return <span style={{ color: brandColors.neutral }}>—</span>;
   const color = gainLossColor(value);
   return <span style={{ color }}>{formatter(value)}</span>;
 };
@@ -42,39 +69,78 @@ const SummaryCards = ({ netWorth, priceInfo, isMobile }) => (
     <Col xs={12} sm={12} md={6}>
       <Card size="small" style={{ borderColor: brandColors.darkBorder }}>
         <Statistic
-          title={<Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>Total Value</Text>}
+          title={
+            <Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>
+              Total Value
+            </Text>
+          }
           value={netWorth?.total_current_value || 0}
           precision={2}
-          styles={{ content: { color: '#fff', fontSize: isMobile ? 18 : 26, fontWeight: 700 } }}
-          formatter={(val) => `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          styles={{
+            content: {
+              color: "#fff",
+              fontSize: isMobile ? 18 : 26,
+              fontWeight: 700,
+            },
+          }}
+          formatter={(val) =>
+            `$${Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          }
         />
       </Card>
     </Col>
     <Col xs={12} sm={12} md={6}>
       <Card size="small" style={{ borderColor: brandColors.darkBorder }}>
         <Statistic
-          title={<Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>Total Cost</Text>}
+          title={
+            <Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>
+              Total Cost
+            </Text>
+          }
           value={netWorth?.total_cost_basis || 0}
           precision={2}
-          styles={{ content: { color: brandColors.textSecondary, fontSize: isMobile ? 18 : 26 } }}
-          formatter={(val) => `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          styles={{
+            content: {
+              color: brandColors.textSecondary,
+              fontSize: isMobile ? 18 : 26,
+            },
+          }}
+          formatter={(val) =>
+            `$${Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          }
         />
       </Card>
     </Col>
     <Col xs={12} sm={12} md={6}>
       <Card size="small" style={{ borderColor: brandColors.darkBorder }}>
         <Statistic
-          title={<Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>Total Gain/Loss</Text>}
+          title={
+            <Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>
+              Total Gain/Loss
+            </Text>
+          }
           value={netWorth?.total_gain_loss || 0}
           precision={2}
-          styles={{ content: { color: gainLossColor(netWorth?.total_gain_loss), fontSize: isMobile ? 18 : 26, fontWeight: 600 } }}
+          styles={{
+            content: {
+              color: gainLossColor(netWorth?.total_gain_loss),
+              fontSize: isMobile ? 18 : 26,
+              fontWeight: 600,
+            },
+          }}
           formatter={(val) => {
             const v = Number(val);
-            const sign = v >= 0 ? '+' : '-';
-            return `${sign}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const sign = v >= 0 ? "+" : "-";
+            return `${sign}$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           }}
           suffix={
-            <Text style={{ fontSize: 12, color: gainLossColor(netWorth?.total_gain_loss), marginLeft: 4 }}>
+            <Text
+              style={{
+                fontSize: 12,
+                color: gainLossColor(netWorth?.total_gain_loss),
+                marginLeft: 4,
+              }}
+            >
               ({formatPercent(netWorth?.total_gain_loss_percent)})
             </Text>
           }
@@ -84,18 +150,35 @@ const SummaryCards = ({ netWorth, priceInfo, isMobile }) => (
     <Col xs={12} sm={12} md={6}>
       <Card size="small" style={{ borderColor: brandColors.darkBorder }}>
         <Statistic
-          title={<Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>Today's Change</Text>}
+          title={
+            <Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>
+              Today's Change
+            </Text>
+          }
           value={netWorth?.total_days_change || 0}
           precision={2}
-          styles={{ content: { color: gainLossColor(netWorth?.total_days_change), fontSize: isMobile ? 18 : 26, fontWeight: 600 } }}
+          styles={{
+            content: {
+              color: gainLossColor(netWorth?.total_days_change),
+              fontSize: isMobile ? 18 : 26,
+              fontWeight: 600,
+            },
+          }}
           formatter={(val) => {
             const v = Number(val);
-            const sign = v >= 0 ? '+' : '-';
-            return `${sign}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const sign = v >= 0 ? "+" : "-";
+            return `${sign}$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           }}
         />
         {priceInfo?.newestPriceAt && (
-          <Text style={{ color: brandColors.textMuted, fontSize: 11, display: 'block', marginTop: 4 }}>
+          <Text
+            style={{
+              color: brandColors.textMuted,
+              fontSize: 11,
+              display: "block",
+              marginTop: 4,
+            }}
+          >
             as of {formatDateTime(priceInfo.newestPriceAt)}
           </Text>
         )}
@@ -107,24 +190,37 @@ const SummaryCards = ({ netWorth, priceInfo, isMobile }) => (
 const AccountPanelHeader = ({ account }) => {
   const daysSince = account.last_imported_at
     ? Math.floor(
-        (new Date().getTime() - new Date(account.last_imported_at).getTime())
-        / (1000 * 60 * 60 * 24)
+        (new Date().getTime() - new Date(account.last_imported_at).getTime()) /
+          (1000 * 60 * 60 * 24),
       )
     : null;
 
-  const freshnessColor = daysSince === null ? brandColors.textMuted
-    : daysSince === 0 ? brandColors.gain
-    : daysSince <= 7  ? brandColors.textSecondary
-    : '#faad14';
+  const freshnessColor =
+    daysSince === null
+      ? brandColors.textMuted
+      : daysSince === 0
+        ? brandColors.gain
+        : daysSince <= 7
+          ? brandColors.textSecondary
+          : "#faad14";
 
   return (
-    <Row align="middle" gutter={[8, 0]} style={{ width: '100%', padding: '2px 0' }}>
+    <Row
+      align="middle"
+      gutter={[8, 0]}
+      style={{ width: "100%", padding: "2px 0" }}
+    >
       <Col xs={24} sm={8} md={6}>
         <Text
           style={{
-            color: '#fff', fontWeight: 600, fontSize: 13,
-            whiteSpace: 'nowrap', overflow: 'hidden',
-            textOverflow: 'ellipsis', maxWidth: 200, display: 'block',
+            color: "#fff",
+            fontWeight: 600,
+            fontSize: 13,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            maxWidth: 200,
+            display: "block",
           }}
           title={account.account_name}
         >
@@ -135,21 +231,48 @@ const AccountPanelHeader = ({ account }) => {
         </Text>
       </Col>
       <Col xs={8} sm={4} md={3}>
-        <Text style={{ color: brandColors.textMuted, fontSize: 11, display: 'block' }}>Value</Text>
-        <Text style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Value
+        </Text>
+        <Text style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>
           {formatCurrency(account.total_current_value)}
         </Text>
       </Col>
       <Col xs={8} sm={4} md={3}>
-        <Text style={{ color: brandColors.textMuted, fontSize: 11, display: 'block' }}>Cost</Text>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Cost
+        </Text>
         <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
           {formatCurrency(account.total_cost_basis)}
         </Text>
       </Col>
       <Col xs={8} sm={4} md={3}>
-        <Text style={{ color: brandColors.textMuted, fontSize: 11, display: 'block' }}>Gain/Loss</Text>
-        {account.account_type === 'checking' || account.account_type === 'savings' ? (
-          <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>—</Text>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Gain/Loss
+        </Text>
+        {account.account_type === "checking" ||
+        account.account_type === "savings" ? (
+          <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
+            —
+          </Text>
         ) : (
           <Space size={4}>
             <GainLossIndicator value={account.total_gain_loss} />
@@ -158,34 +281,68 @@ const AccountPanelHeader = ({ account }) => {
         )}
       </Col>
       <Col xs={0} sm={0} md={3}>
-        <Text style={{ color: brandColors.textMuted, fontSize: 11, display: 'block' }}>Today</Text>
-        {account.account_type === 'checking' || account.account_type === 'savings' ? (
-          <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>—</Text>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Today
+        </Text>
+        {account.account_type === "checking" ||
+        account.account_type === "savings" ? (
+          <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
+            —
+          </Text>
         ) : (
           <ColoredValue value={account.total_days_change} />
         )}
       </Col>
       <Col xs={0} sm={0} md={2}>
-        <Text style={{ color: brandColors.textMuted, fontSize: 11, display: 'block' }}>Holdings</Text>
-        <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>{account.position_count}</Text>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Holdings
+        </Text>
+        <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
+          {account.position_count}
+        </Text>
       </Col>
       <Col xs={0} sm={0} md={4}>
-        <Text style={{ color: brandColors.textMuted, fontSize: 11, display: 'block' }}>Last Import</Text>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
+          Last Import
+        </Text>
         {account.last_imported_at ? (
           <Space size={4}>
             <Text style={{ color: freshnessColor, fontSize: 12 }}>
-              {daysSince === 0 ? 'Today'
-                : daysSince === 1 ? 'Yesterday'
-                : `${daysSince}d ago`}
+              {daysSince === 0
+                ? "Today"
+                : daysSince === 1
+                  ? "Yesterday"
+                  : `${daysSince}d ago`}
             </Text>
             <Text style={{ color: freshnessColor, fontSize: 11 }}>
-              {new Date(account.last_imported_at).toLocaleTimeString('en-US', {
-                hour: 'numeric', minute: '2-digit'
+              {new Date(account.last_imported_at).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
               })}
             </Text>
           </Space>
         ) : (
-          <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>Never</Text>
+          <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+            Never
+          </Text>
         )}
       </Col>
     </Row>
@@ -194,123 +351,176 @@ const AccountPanelHeader = ({ account }) => {
 
 const desktopColumns = [
   {
-    title: 'Ticker',
-    dataIndex: 'ticker',
-    key: 'ticker',
+    title: "Ticker",
+    dataIndex: "ticker",
+    key: "ticker",
     width: 110,
     render: (val, row) => (
       <Space direction="vertical" size={0}>
-        <Text style={{ color: '#fff', fontWeight: 600 }}>{val}</Text>
-        <Text style={{
-          color: brandColors.textMuted, fontSize: 11,
-          maxWidth: 100, overflow: 'hidden',
-          textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block',
-        }} title={row.asset_name}>
+        <Text style={{ color: "#fff", fontWeight: 600 }}>{val}</Text>
+        <Text
+          style={{
+            color: brandColors.textMuted,
+            fontSize: 11,
+            maxWidth: 100,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            display: "block",
+          }}
+          title={row.asset_name}
+        >
           {row.asset_name}
         </Text>
       </Space>
     ),
   },
   {
-    title: 'Type',
-    dataIndex: 'asset_type',
-    key: 'asset_type',
+    title: "Type",
+    dataIndex: "asset_type",
+    key: "asset_type",
     width: 90,
-    render: (val) => <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>{assetTypeName(val)}</Text>,
+    render: (val) => (
+      <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+        {assetTypeName(val)}
+      </Text>
+    ),
   },
   {
-    title: 'Shares',
-    dataIndex: 'shares',
-    key: 'shares',
+    title: "Shares",
+    dataIndex: "shares",
+    key: "shares",
     width: 90,
-    align: 'right',
-    render: (val) => <Text style={{ color: brandColors.textSecondary }}>{formatShares(val)}</Text>,
+    align: "right",
+    render: (val) => (
+      <Text style={{ color: brandColors.textSecondary }}>
+        {formatShares(val)}
+      </Text>
+    ),
   },
   {
-    title: 'Price',
-    dataIndex: 'current_price',
-    key: 'current_price',
+    title: "Price",
+    dataIndex: "current_price",
+    key: "current_price",
     width: 100,
-    align: 'right',
+    align: "right",
     render: (val, row) => (
-      <Space direction="vertical" size={0} style={{ textAlign: 'right' }}>
-        <Text style={{ color: '#fff' }}>{formatCurrency(val)}</Text>
-        <Text style={{ fontSize: 11, color: gainLossColor(row.change_percent) }}>
+      <Space direction="vertical" size={0} style={{ textAlign: "right" }}>
+        <Text style={{ color: "#fff" }}>{formatCurrency(val)}</Text>
+        <Text
+          style={{ fontSize: 11, color: gainLossColor(row.change_percent) }}
+        >
           {formatPercent(row.change_percent)}
         </Text>
       </Space>
     ),
   },
   {
-    title: 'Value',
-    dataIndex: 'current_value',
-    key: 'current_value',
+    title: "Value",
+    dataIndex: "current_value",
+    key: "current_value",
     width: 115,
-    align: 'right',
+    align: "right",
     sorter: (a, b) => (a.current_value || 0) - (b.current_value || 0),
-    render: (val) => <Text style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(val)}</Text>,
+    render: (val) => (
+      <Text style={{ color: "#fff", fontWeight: 600 }}>
+        {formatCurrency(val)}
+      </Text>
+    ),
   },
   {
-    title: 'Cost',
-    dataIndex: 'cost_basis',
-    key: 'cost_basis',
+    title: "Cost",
+    dataIndex: "cost_basis",
+    key: "cost_basis",
     width: 110,
-    align: 'right',
-    render: (val) => <Text style={{ color: brandColors.textSecondary }}>{formatCurrency(val)}</Text>,
+    align: "right",
+    render: (val) => (
+      <Text style={{ color: brandColors.textSecondary }}>
+        {formatCurrency(val)}
+      </Text>
+    ),
   },
   {
-    title: 'Gain/Loss',
-    dataIndex: 'gain_loss',
-    key: 'gain_loss',
+    title: "Gain/Loss",
+    dataIndex: "gain_loss",
+    key: "gain_loss",
     width: 135,
-    align: 'right',
+    align: "right",
     sorter: (a, b) => (a.gain_loss || 0) - (b.gain_loss || 0),
     render: (val, row) => {
-      if (row.asset_type === 'cash') return <Text style={{ color: brandColors.neutral }}>—</Text>;
+      if (row.asset_type === "cash")
+        return <Text style={{ color: brandColors.neutral }}>—</Text>;
       return (
-        <Space direction="vertical" size={0} style={{ textAlign: 'right' }}>
+        <Space direction="vertical" size={0} style={{ textAlign: "right" }}>
           <Space size={4}>
             <GainLossIndicator value={val} />
             <ColoredValue value={val} />
           </Space>
-          <ColoredValue value={row.gain_loss_percent} formatter={formatPercent} />
+          <ColoredValue
+            value={row.gain_loss_percent}
+            formatter={formatPercent}
+          />
         </Space>
       );
     },
   },
   {
-    title: 'Today',
-    dataIndex: 'days_change',
-    key: 'days_change',
+    title: "Today",
+    dataIndex: "days_change",
+    key: "days_change",
     width: 100,
-    align: 'right',
+    align: "right",
     render: (val, row) => {
-      if (row.asset_type === 'cash') return <Text style={{ color: brandColors.neutral }}>—</Text>;
+      if (row.asset_type === "cash")
+        return <Text style={{ color: brandColors.neutral }}>—</Text>;
       return <ColoredValue value={val} />;
     },
   },
 ];
 
 const MobilePositionCard = ({ position }) => (
-  <Card size="small" style={{ marginBottom: 8, borderColor: brandColors.darkBorder }}>
+  <Card
+    size="small"
+    style={{ marginBottom: 8, borderColor: brandColors.darkBorder }}
+  >
     <Row justify="space-between" align="middle">
       <Col>
         <Space size={8}>
-          <Text style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{position.ticker}</Text>
-          <Tag style={{ fontSize: 10 }}>{assetTypeName(position.asset_type)}</Tag>
+          <Text style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>
+            {position.ticker}
+          </Text>
+          <Tag style={{ fontSize: 10 }}>
+            {assetTypeName(position.asset_type)}
+          </Tag>
         </Space>
-        <Text style={{ color: brandColors.textSecondary, fontSize: 11, display: 'block' }}>
+        <Text
+          style={{
+            color: brandColors.textSecondary,
+            fontSize: 11,
+            display: "block",
+          }}
+        >
           {position.asset_name}
         </Text>
       </Col>
-      <Col style={{ textAlign: 'right' }}>
-        <Text style={{ color: '#fff', fontWeight: 600, fontSize: 14, display: 'block' }}>
+      <Col style={{ textAlign: "right" }}>
+        <Text
+          style={{
+            color: "#fff",
+            fontWeight: 600,
+            fontSize: 14,
+            display: "block",
+          }}
+        >
           {formatCurrency(position.current_value)}
         </Text>
-        {position.asset_type !== 'cash' && (
+        {position.asset_type !== "cash" && (
           <Space size={4}>
             <GainLossIndicator value={position.gain_loss} />
-            <ColoredValue value={position.gain_loss_percent} formatter={formatPercent} />
+            <ColoredValue
+              value={position.gain_loss_percent}
+              formatter={formatPercent}
+            />
           </Space>
         )}
       </Col>
@@ -321,12 +531,13 @@ const MobilePositionCard = ({ position }) => (
 const AccountPositionsTable = ({ positions, accountSummary, isMobile }) => {
   if (isMobile) {
     return (
-      <div style={{ padding: '8px 0' }}>
-        {positions.map(p => <MobilePositionCard key={p.id} position={p} />)}
+      <div style={{ padding: "8px 0" }}>
+        {positions.map((p) => (
+          <MobilePositionCard key={p.id} position={p} />
+        ))}
       </div>
     );
   }
-
   return (
     <Table
       dataSource={positions}
@@ -340,12 +551,18 @@ const AccountPositionsTable = ({ positions, accountSummary, isMobile }) => {
         <Table.Summary fixed>
           <Table.Summary.Row style={{ background: brandColors.darkHover }}>
             <Table.Summary.Cell index={0} colSpan={4}>
-              <Text style={{ color: brandColors.textSecondary, fontWeight: 600, fontSize: 12 }}>
+              <Text
+                style={{
+                  color: brandColors.textSecondary,
+                  fontWeight: 600,
+                  fontSize: 12,
+                }}
+              >
                 Account Total
               </Text>
             </Table.Summary.Cell>
             <Table.Summary.Cell index={4} align="right">
-              <Text style={{ color: '#fff', fontWeight: 700 }}>
+              <Text style={{ color: "#fff", fontWeight: 700 }}>
                 {formatCurrency(accountSummary.total_current_value)}
               </Text>
             </Table.Summary.Cell>
@@ -355,14 +572,16 @@ const AccountPositionsTable = ({ positions, accountSummary, isMobile }) => {
               </Text>
             </Table.Summary.Cell>
             <Table.Summary.Cell index={6} align="right">
-              {accountSummary.account_type === 'checking' || accountSummary.account_type === 'savings' ? (
+              {accountSummary.account_type === "checking" ||
+              accountSummary.account_type === "savings" ? (
                 <Text style={{ color: brandColors.textSecondary }}>—</Text>
               ) : (
                 <ColoredValue value={accountSummary.total_gain_loss} />
               )}
             </Table.Summary.Cell>
             <Table.Summary.Cell index={7} align="right">
-              {accountSummary.account_type === 'checking' || accountSummary.account_type === 'savings' ? (
+              {accountSummary.account_type === "checking" ||
+              accountSummary.account_type === "savings" ? (
                 <Text style={{ color: brandColors.textSecondary }}>—</Text>
               ) : (
                 <ColoredValue value={accountSummary.total_days_change} />
@@ -378,32 +597,59 @@ const AccountPositionsTable = ({ positions, accountSummary, isMobile }) => {
 // =============================================================================
 // PortfolioView — reusable portfolio display (own + shared)
 // =============================================================================
-const PortfolioView = ({ netWorth, accounts, positions, priceInfo, isMobile, refreshing, onRefresh, readOnly = false, isOwn = false }) => {
-  
-    // Show empty state for own portfolio with no accounts
-  if (isOwn && (!accounts || accounts.length === 0)) {
+const PortfolioView = ({
+  netWorth,
+  accounts,
+  positions,
+  priceInfo,
+  isMobile,
+  refreshing,
+  onRefresh,
+  readOnly = false,
+  isOwn = false,
+  isViewer = false,
+}) => {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedAccounts, setSelectedAccounts] = useState([]);
+  const [selectedInstitutions, setSelectedInstitutions] = useState([]);
+  const [sortBy, setSortBy] = useState("value_desc");
+
+  // Show empty state for viewer with no own accounts
+  if (isOwn && isViewer && (!accounts || accounts.length === 0)) {
     return (
-      <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-        <div style={{
-          background: brandColors.darkCard,
-          border: `1px solid ${brandColors.darkBorder}`,
-          borderRadius: 12,
-          padding: 40,
-          maxWidth: 480,
-          margin: '0 auto',
-        }}>
-          <Text style={{ fontSize: 32, display: 'block', marginBottom: 16 }}>📊</Text>
-          <Title level={4} style={{ color: '#fff', marginBottom: 8 }}>
+      <div style={{ textAlign: "center", padding: "60px 24px" }}>
+        <div
+          style={{
+            background: brandColors.darkCard,
+            border: `1px solid ${brandColors.darkBorder}`,
+            borderRadius: 12,
+            padding: 40,
+            maxWidth: 480,
+            margin: "0 auto",
+          }}
+        >
+          <Text style={{ fontSize: 32, display: "block", marginBottom: 16 }}>
+            📊
+          </Text>
+          <Title level={4} style={{ color: "#fff", marginBottom: 8 }}>
             Your portfolio is empty
           </Title>
-          <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 24 }}>
+          <Text
+            style={{
+              color: brandColors.textSecondary,
+              display: "block",
+              marginBottom: 24,
+            }}
+          >
             You currently have view-only access. To track your own investments,
             request an upgrade to a full account.
           </Text>
           <Button
             type="primary"
             icon={<CrownOutlined />}
-            onClick={() => window.location.href = '/profile'}
+            onClick={() => {
+              window.location.href = "/profile";
+            }}
             style={{ fontWeight: 600 }}
           >
             Request Full Access
@@ -412,14 +658,42 @@ const PortfolioView = ({ netWorth, accounts, positions, priceInfo, isMobile, ref
       </div>
     );
   }
-  
+
+  // Build filtered + sorted account list
+  const filteredAccounts = (accounts || [])
+    .filter(
+      (a) =>
+        selectedAccounts.length === 0 ||
+        selectedAccounts.includes(a.account_id),
+    )
+    .filter(
+      (a) =>
+        selectedInstitutions.length === 0 ||
+        selectedInstitutions.includes(a.institution),
+    )
+    .sort((a, b) => {
+      if (sortBy === "value_desc")
+        return (b.total_current_value || 0) - (a.total_current_value || 0);
+      if (sortBy === "gain_desc")
+        return (b.total_gain_loss || 0) - (a.total_gain_loss || 0);
+      if (sortBy === "name_asc")
+        return a.account_name.localeCompare(b.account_name);
+      return 0;
+    });
+
+  const institutions = [...new Set((accounts || []).map((a) => a.institution))];
+  const hasFilters =
+    selectedAccounts.length > 0 ||
+    selectedInstitutions.length > 0 ||
+    sortBy !== "value_desc";
+
   const positionsByAccount = (positions || []).reduce((acc, pos) => {
     if (!acc[pos.account_id]) acc[pos.account_id] = [];
     acc[pos.account_id].push(pos);
     return acc;
   }, {});
 
-  const collapseItems = (accounts || []).map(account => ({
+  const collapseItems = filteredAccounts.map((account) => ({
     key: account.account_id,
     label: <AccountPanelHeader account={account} />,
     children: (
@@ -433,19 +707,46 @@ const PortfolioView = ({ netWorth, accounts, positions, priceInfo, isMobile, ref
       marginBottom: 8,
       borderRadius: 8,
       border: `1px solid ${brandColors.darkBorder}`,
-      overflow: 'hidden',
+      overflow: "hidden",
     },
   }));
 
   return (
     <div>
-      <SummaryCards netWorth={netWorth} priceInfo={priceInfo} isMobile={isMobile} />
+      <SummaryCards
+        netWorth={netWorth}
+        priceInfo={priceInfo}
+        isMobile={isMobile}
+      />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <Title level={5} style={{ color: brandColors.textSecondary, margin: 0 }}>
+      {/* Accounts header + filter controls */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
+        <Title
+          level={5}
+          style={{ color: brandColors.textSecondary, margin: 0 }}
+        >
           Accounts
-          <Text style={{ color: brandColors.textMuted, fontSize: 13, marginLeft: 8, fontWeight: 400 }}>
-            ({(accounts || []).length} accounts · {(positions || []).length} holdings)
+          <Text
+            style={{
+              color: brandColors.textMuted,
+              fontSize: 13,
+              marginLeft: 8,
+              fontWeight: 400,
+            }}
+          >
+            ({filteredAccounts.length} of {(accounts || []).length} accounts ·{" "}
+            {filteredAccounts.reduce(
+              (sum, a) => sum + (a.position_count || 0),
+              0,
+            )}{" "}
+            holdings)
           </Text>
         </Title>
         <Space>
@@ -454,6 +755,17 @@ const PortfolioView = ({ netWorth, accounts, positions, priceInfo, isMobile, ref
               Prices as of {formatDateTime(priceInfo.newestPriceAt)}
             </Text>
           )}
+          <Button
+            type={hasFilters ? "primary" : "text"}
+            icon={<FilterOutlined />}
+            size="small"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            style={{
+              color: hasFilters ? undefined : brandColors.textSecondary,
+            }}
+          >
+            {hasFilters ? "Filtered" : "Filter"}
+          </Button>
           {!readOnly && onRefresh && (
             <Button
               type="text"
@@ -468,6 +780,135 @@ const PortfolioView = ({ netWorth, accounts, positions, priceInfo, isMobile, ref
         </Space>
       </div>
 
+      {/* Filter panel */}
+      {filtersOpen && (
+        <div
+          style={{
+            background: brandColors.darkCard,
+            border: `1px solid ${brandColors.darkBorder}`,
+            borderRadius: 8,
+            padding: 16,
+            marginBottom: 16,
+          }}
+        >
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={8}>
+              <Text
+                style={{
+                  color: brandColors.textMuted,
+                  fontSize: 12,
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Sort By
+              </Text>
+              <Select
+                value={sortBy}
+                onChange={setSortBy}
+                style={{ width: "100%" }}
+                size="small"
+                options={[
+                  { value: "value_desc", label: "Value — highest first" },
+                  { value: "gain_desc", label: "Gain/Loss — highest first" },
+                  { value: "name_asc", label: "Name — A to Z" },
+                ]}
+              />
+            </Col>
+            <Col xs={24} md={8}>
+              <Text
+                style={{
+                  color: brandColors.textMuted,
+                  fontSize: 12,
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Institution
+              </Text>
+              <Checkbox.Group
+                value={selectedInstitutions}
+                onChange={(newInstitutions) => {
+                  setSelectedInstitutions(newInstitutions);
+                  // Clear any selected accounts that no longer belong to selected institutions
+                  if (newInstitutions.length > 0) {
+                    setSelectedAccounts((prev) =>
+                      prev.filter((accountId) => {
+                        const account = (accounts || []).find(
+                          (a) => a.account_id === accountId,
+                        );
+                        return (
+                          account &&
+                          newInstitutions.includes(account.institution)
+                        );
+                      }),
+                    );
+                  }
+                }}
+                style={{ display: "flex", flexDirection: "column", gap: 4 }}
+              >
+                {institutions.map((inst) => (
+                  <Checkbox
+                    key={inst}
+                    value={inst}
+                    style={{ color: brandColors.textSecondary }}
+                  >
+                    {institutionName(inst)}
+                  </Checkbox>
+                ))}
+              </Checkbox.Group>
+            </Col>
+            <Col xs={24} md={8}>
+              <Text
+                style={{
+                  color: brandColors.textMuted,
+                  fontSize: 12,
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Accounts
+              </Text>
+              <Checkbox.Group
+                value={selectedAccounts}
+                onChange={setSelectedAccounts}
+                style={{ display: "flex", flexDirection: "column", gap: 4 }}
+              >
+                {(accounts || [])
+                  .filter(
+                    (a) =>
+                      selectedInstitutions.length === 0 ||
+                      selectedInstitutions.includes(a.institution),
+                  )
+                  .map((a) => (
+                    <Checkbox
+                      key={a.account_id}
+                      value={a.account_id}
+                      style={{ color: brandColors.textSecondary }}
+                    >
+                      {a.account_name}
+                    </Checkbox>
+                  ))}
+              </Checkbox.Group>
+            </Col>
+          </Row>
+          {hasFilters && (
+            <Button
+              size="small"
+              type="link"
+              onClick={() => {
+                setSelectedAccounts([]);
+                setSelectedInstitutions([]);
+                setSortBy("value_desc");
+              }}
+              style={{ color: brandColors.textMuted, padding: "8px 0 0" }}
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
+      )}
+
       <Collapse
         ghost
         defaultActiveKey={[]}
@@ -476,13 +917,13 @@ const PortfolioView = ({ netWorth, accounts, positions, priceInfo, isMobile, ref
             style={{
               color: brandColors.textMuted,
               fontSize: 12,
-              transform: isActive ? 'rotate(90deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s',
+              transform: isActive ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 0.2s",
             }}
           />
         )}
         items={collapseItems}
-        style={{ background: 'transparent' }}
+        style={{ background: "transparent" }}
       />
     </div>
   );
@@ -492,16 +933,19 @@ const PortfolioView = ({ netWorth, accounts, positions, priceInfo, isMobile, ref
 // Dashboard Page
 // =============================================================================
 const Dashboard = () => {
-  const [dashboard, setDashboard]           = useState(null);
-  const [loading, setLoading]               = useState(true);
-  const [error, setError]                   = useState(null);
-  const [shares, setShares]                 = useState([]);
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [shares, setShares] = useState([]);
   const [sharedDashboards, setSharedDashboards] = useState({});
-  const [activeTab, setActiveTab]           = useState('mine');
-  const [refreshing, setRefreshing]         = useState(false);
-  const screens                             = useBreakpoint();
-  const isMobile                            = !screens.md;
-  const { message }                         = AntdApp.useApp();
+  const [activeTab, setActiveTab] = useState("mine");
+  const [refreshing, setRefreshing] = useState(false);
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+  const { message } = AntdApp.useApp();
+  const { user } = useAuth();
+  const isViewer =
+    user?.role === "viewer" || user?.user_metadata?.role === "viewer";
 
   useEffect(() => {
     let cancelled = false;
@@ -517,39 +961,45 @@ const Dashboard = () => {
           setShares(sharesData.viewing || []);
         }
       } catch (err) {
-        if (!cancelled) setError(err.response?.data?.message || 'Failed to load dashboard');
+        if (!cancelled)
+          setError(err.response?.data?.message || "Failed to load dashboard");
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-const loadSharedDashboard = useCallback(async (ownerId) => {
-  if (sharedDashboards[ownerId]) return;
-  try {
-    const data = await sharesService.getSharedDashboard(ownerId);
-    setSharedDashboards(prev => ({ ...prev, [ownerId]: data }));
-  } catch {
-    message.error('Failed to load shared portfolio');
-  }
-}, [sharedDashboards, message]);
+  const loadSharedDashboard = useCallback(
+    async (ownerId) => {
+      if (sharedDashboards[ownerId]) return;
+      try {
+        const data = await sharesService.getSharedDashboard(ownerId);
+        setSharedDashboards((prev) => ({ ...prev, [ownerId]: data }));
+      } catch {
+        message.error("Failed to load shared portfolio");
+      }
+    },
+    [sharedDashboards, message],
+  );
 
-// Auto-switch to shared tab if viewer has no own accounts
   useEffect(() => {
-  const autoSwitch = async () => {
-    if (!loading && shares.length > 0 && dashboard && (!dashboard.accounts || dashboard.accounts.length === 0)) {
-      setActiveTab(shares[0].owner_user_id);
-      await loadSharedDashboard(shares[0].owner_user_id);
-    }
-  };
-  autoSwitch();
-}, [loading, shares, dashboard, loadSharedDashboard]);  
-
-  
-
-
+    const autoSwitch = async () => {
+      if (
+        !loading &&
+        shares.length > 0 &&
+        dashboard &&
+        (!dashboard.accounts || dashboard.accounts.length === 0)
+      ) {
+        setActiveTab(shares[0].owner_user_id);
+        await loadSharedDashboard(shares[0].owner_user_id);
+      }
+    };
+    autoSwitch();
+  }, [loading, shares, dashboard, loadSharedDashboard]);
 
   const handleRefreshPrices = async () => {
     setRefreshing(true);
@@ -557,9 +1007,9 @@ const loadSharedDashboard = useCallback(async (ownerId) => {
       await priceService.refresh();
       const data = await dashboardService.getDashboard();
       setDashboard(data);
-      message.success('Prices updated');
+      message.success("Prices updated");
     } catch {
-      message.error('Price refresh failed');
+      message.error("Price refresh failed");
     } finally {
       setRefreshing(false);
     }
@@ -567,7 +1017,7 @@ const loadSharedDashboard = useCallback(async (ownerId) => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+      <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
         <Spin size="large" />
       </div>
     );
@@ -577,12 +1027,11 @@ const loadSharedDashboard = useCallback(async (ownerId) => {
 
   const { netWorth, accounts, positions, priceInfo } = dashboard;
 
-  // If user has shared portfolios to view, show tabs
   if (shares.length > 0) {
     const tabItems = [
       {
-        key: 'mine',
-        label: 'My Portfolio',
+        key: "mine",
+        label: "My Portfolio",
         children: (
           <PortfolioView
             netWorth={netWorth}
@@ -592,24 +1041,31 @@ const loadSharedDashboard = useCallback(async (ownerId) => {
             isMobile={isMobile}
             refreshing={refreshing}
             onRefresh={handleRefreshPrices}
-            isOwn={true}
+            isOwn
+            isViewer={isViewer}
           />
         ),
       },
-      ...shares.map(share => ({
+      ...shares.map((share) => ({
         key: share.owner_user_id,
         label: `${share.owner_name}'s Portfolio`,
         children: sharedDashboards[share.owner_user_id] ? (
           <PortfolioView
             netWorth={sharedDashboards[share.owner_user_id].dashboard.netWorth}
             accounts={sharedDashboards[share.owner_user_id].dashboard.accounts}
-            positions={sharedDashboards[share.owner_user_id].dashboard.positions}
-            priceInfo={sharedDashboards[share.owner_user_id].dashboard.priceInfo}
+            positions={
+              sharedDashboards[share.owner_user_id].dashboard.positions
+            }
+            priceInfo={
+              sharedDashboards[share.owner_user_id].dashboard.priceInfo
+            }
             isMobile={isMobile}
             readOnly
           />
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+          <div
+            style={{ display: "flex", justifyContent: "center", padding: 80 }}
+          >
             <Spin size="large" />
           </div>
         ),
@@ -618,14 +1074,17 @@ const loadSharedDashboard = useCallback(async (ownerId) => {
 
     return (
       <div>
-        <Title level={4} style={{ color: '#fff', marginBottom: 16, marginTop: 0 }}>
+        <Title
+          level={4}
+          style={{ color: "#fff", marginBottom: 16, marginTop: 0 }}
+        >
           Portfolio Overview
         </Title>
         <Tabs
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
-            if (key !== 'mine') loadSharedDashboard(key);
+            if (key !== "mine") loadSharedDashboard(key);
           }}
           items={tabItems}
         />
@@ -633,10 +1092,12 @@ const loadSharedDashboard = useCallback(async (ownerId) => {
     );
   }
 
-  // No shares — show portfolio directly without tabs
   return (
     <div>
-      <Title level={4} style={{ color: '#fff', marginBottom: 20, marginTop: 0 }}>
+      <Title
+        level={4}
+        style={{ color: "#fff", marginBottom: 20, marginTop: 0 }}
+      >
         Portfolio Overview
       </Title>
       <PortfolioView
@@ -647,7 +1108,8 @@ const loadSharedDashboard = useCallback(async (ownerId) => {
         isMobile={isMobile}
         refreshing={refreshing}
         onRefresh={handleRefreshPrices}
-        isOwn={true}
+        isOwn
+        isViewer={isViewer}
       />
     </div>
   );

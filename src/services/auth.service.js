@@ -40,10 +40,7 @@ export const authService = {
   },
 
   forgotPassword: async (email) => {
-    const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) throw error;
-    return { success: true };
-  },
+  const response = await api.post('/auth/forgot-password', { email });
+  return response.data;
+},
 };

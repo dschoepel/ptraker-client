@@ -453,6 +453,7 @@ useEffect(() => {
       title: "Account Name",
       dataIndex: "name",
       key: "name",
+      sorter: (a, b) => a.name.localeCompare(b.name),
       render: (val, row) => (
         <Space direction="vertical" size={0}>
           <Text
@@ -475,6 +476,7 @@ useEffect(() => {
       title: "Institution",
       dataIndex: "institution",
       key: "institution",
+      sorter: (a, b) => institutionName(a.institution).localeCompare(institutionName(b.institution)),
       width: 160,
       render: (val) => (
         <Tag color="default" style={{ fontSize: 12 }}>
@@ -486,6 +488,7 @@ useEffect(() => {
       title: "Type",
       dataIndex: "type",
       key: "type",
+      sorter: (a, b) => accountTypeName(a.type).localeCompare(accountTypeName(b.type)),
       width: 120,
       render: (val) => (
         <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
@@ -628,6 +631,7 @@ useEffect(() => {
       )}
 
       <Table
+        showSorterTooltip={false}
         dataSource={accounts}
         columns={columns}
         rowKey="id"

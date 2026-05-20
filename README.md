@@ -51,16 +51,17 @@ npm run build   # production → dist/
 - Dark/light mode (system preference)
 - Responsive — desktop sidebar + mobile bottom tab bar
 - Role-based navigation (viewer sees fewer options)
-- Dashboard with collapsible account sections
-- Shared portfolio tabs (viewer can see owner's portfolio)
+- Dashboard with collapsible account sections and filter panel
+- Shared portfolio tabs (viewer sees owner's portfolio)
 - Real-time price refresh via Yahoo Finance
-- Full account management (admin/user only)
-- Import wizard: CSV/QFX + manual balance/position entry
+- Account management with column sorts (admin/user only)
+- Import wizard: CSV/QFX + manual balance/position entry with ticker autocomplete
 - Sync-delete with watchlist integration
-- Watchlist with 30-day sparkline charts
+- Watchlist with 30-day sparkline charts and symbol search
 - Admin: invite users, manage roles, notification settings (Ntfy + email)
-- Profile: share portfolio, request upgrade, delete account
-- Password reset + invite acceptance flows
+- Profile: privacy toggle, portfolio sharing, request upgrade, data export, delete account
+- Password reset via email link or 6-digit OTP code
+- Branded invite acceptance flow
 
 ## User Roles
 
@@ -83,6 +84,15 @@ npm run build   # production → dist/
 | Watchlist | `/watchlist` | All roles |
 | Profile/Settings | `/profile` | All roles |
 | Admin | `/admin` | admin only |
+
+## Supported Institutions
+
+| Institution | Import Method |
+|---|---|
+| LPL Financial | CSV export |
+| Community First CU | CSV transaction history |
+| Associated Bank (NJSD plans) | Manual entry by market value |
+| Any cash account | Manual balance entry |
 
 ## Production
 
