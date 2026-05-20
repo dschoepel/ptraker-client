@@ -236,10 +236,12 @@ Checking/savings accounts show `—` for Gain/Loss and Today in both header and 
 ## Accounts Page
 
 - Full CRUD with Popconfirm on delete
-- Expandable rows show positions (lazy loaded)
+- **Desktop:** expandable table rows show positions, column sorts (name, institution, type)
+- **Mobile:** card list with tap-to-expand positions inline
+- `isMobile = !screens.md` switches between views
 - Delete individual positions via `positionService.remove(id)`
-- Column sorts: name (`a.name`), institution (`institutionName(a.institution)`), type (`a.type` not `a.account_type`)
-- `showSorterTooltip={false}` on Table
+- `showSorterTooltip={false}` on desktop Table
+- Column sort note: use `a.type` not `a.account_type` for type sorter
 
 ---
 
