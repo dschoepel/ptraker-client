@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Typography, Modal, Form, Input,
   Select, Popconfirm, Alert, Spin, Grid, App as AntdApp, Tooltip,
-  Card, Row, Col,
+  Card, 
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
@@ -47,7 +47,7 @@ const PositionsTable = ({ positions, loading, onDeletePosition }) => {
     {
       title: 'Ticker', dataIndex: 'ticker', key: 'ticker', width: 100,
       render: (val, row) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text style={{ color: '#fff', fontWeight: 600 }}>{val}</Text>
           <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>{assetTypeName(row.asset_type)}</Text>
         </Space>
@@ -74,7 +74,7 @@ const PositionsTable = ({ positions, loading, onDeletePosition }) => {
       render: (val, row) => {
         if (row.asset_type === 'cash') return <Text style={{ color: brandColors.neutral }}>—</Text>;
         return (
-          <Space direction="vertical" size={0} style={{ textAlign: 'right' }}>
+          <Space orientation="vertical" size={0} style={{ textAlign: 'right' }}>
             <GainLossText value={val} />
             <GainLossText value={row.gain_loss_percent} asPercent />
           </Space>
@@ -119,7 +119,7 @@ const MobilePositionCard = ({ position, onDelete }) => (
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     padding: '10px 0', borderBottom: `1px solid ${brandColors.darkBorder}`,
   }}>
-    <Space direction="vertical" size={0}>
+    <Space orientation="vertical" size={0}>
       <Space size={6}>
         <Text style={{ color: '#fff', fontWeight: 600 }}>{position.ticker}</Text>
         <Tag style={{ fontSize: 10 }}>{assetTypeName(position.asset_type)}</Tag>
@@ -127,7 +127,7 @@ const MobilePositionCard = ({ position, onDelete }) => (
       <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>{position.asset_name}</Text>
     </Space>
     <Space size={12} align="center">
-      <Space direction="vertical" size={0} style={{ textAlign: 'right' }}>
+      <Space orientation="vertical" size={0} style={{ textAlign: 'right' }}>
         <Text style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(position.current_value)}</Text>
         {position.asset_type !== 'cash' && (
           <GainLossText value={position.gain_loss_percent} asPercent />
@@ -162,7 +162,7 @@ const MobileAccountCard = ({ account, positions, posLoading, onEdit, onToggleAct
       style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }}
       onClick={onExpand}
     >
-      <Space direction="vertical" size={2} style={{ flex: 1 }}>
+      <Space orientation="vertical" size={2} style={{ flex: 1 }}>
         <Space size={6} wrap>
           <Text style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{account.name}</Text>
           {!account.is_active && <Tag color="default" style={{ fontSize: 10 }}>Inactive</Tag>}
@@ -329,7 +329,22 @@ const Accounts = () => {
     }
   }, []);
 
-  useEffect(() => { loadAccounts(); }, [loadAccounts]);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const data = await accountService.getAll();
+        if (!cancelled) setAccounts(data.accounts);
+      } catch (err) {
+        if (!cancelled) setError(err.response?.data?.message || 'Failed to load accounts');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   const loadPositions = useCallback(async (accountId) => {
     if (positions[accountId]) return;
@@ -427,7 +442,7 @@ const Accounts = () => {
       title: 'Account Name', dataIndex: 'name', key: 'name',
       sorter: (a, b) => a.name.localeCompare(b.name),
       render: (val, row) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text style={{ color: row.is_active ? '#fff' : brandColors.textMuted, fontWeight: 600 }}>{val}</Text>
           {!row.is_active && <Tag color="default" style={{ fontSize: 10 }}>Inactive</Tag>}
         </Space>

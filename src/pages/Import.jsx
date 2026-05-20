@@ -10,6 +10,7 @@ import {
   EditOutlined
 } from '@ant-design/icons';
 import { importService, accountService, watchlistService } from '../services/dashboard.service';
+import { useAuth } from '../store/useAuth';
 import { formatCurrency, formatPercent, formatDate, institutionName, gainLossColor } from '../utils/formatters';
 import { brandColors } from '../theme';
 
@@ -369,12 +370,12 @@ const RemovedPositions = ({ positions, onAddToWatchlist, addingToWatchlist }) =>
           borderBottom: i < positions.length - 1 ? `1px solid ${brandColors.darkBorder}` : 'none',
         }}>
           <Space size={12}>
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <Text style={{ color: '#fff', fontWeight: 600 }}>{pos.ticker}</Text>
               <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>{pos.assetName}</Text>
             </Space>
             {pos.currentPrice && (
-              <Space direction="vertical" size={0}>
+              <Space orientation="vertical" size={0}>
                 <Text style={{ color: '#fff', fontSize: 13 }}>{formatCurrency(pos.currentPrice)}</Text>
                 <Text style={{ fontSize: 11, color: gainLossColor(pos.changePercent) }}>
                   {formatPercent(pos.changePercent)}
@@ -425,7 +426,7 @@ const StepResults = ({ result, onImportAnother, onAddToWatchlist, addingToWatchl
             </Text>
           </div>
 
-          <Divider type="vertical" style={{ height: 60, borderColor: brandColors.darkBorder }} />
+          <Divider orientation="vertical" style={{ height: 60, borderColor: brandColors.darkBorder }} />
 
           <Space size={24}>
             {result.filename && (
@@ -554,6 +555,7 @@ const StepResults = ({ result, onImportAnother, onAddToWatchlist, addingToWatchl
 // =============================================================================
 const Import = () => {
   const [currentStep, setCurrentStep]         = useState(0);
+  const { user }                              = useAuth();
   const [importers, setImporters]             = useState([]);
   const [accounts, setAccounts]               = useState([]);
   const [selectedImporter, setSelectedImporter] = useState(null);
@@ -572,6 +574,7 @@ const Import = () => {
   const isManual = selectedImporterObj?.isManual || false;
 
   useEffect(() => {
+    if (!user) return;   // wait for auth before making API calls
     let cancelled = false;
     const loadData = async () => {
       try {
@@ -595,7 +598,7 @@ const Import = () => {
     };
     loadData();
     return () => { cancelled = true; };
-  }, []);
+  }, [user]);
 
   const handleImport = async () => {
     if (!file || !selectedImporter) return;
