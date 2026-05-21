@@ -1,143 +1,95 @@
-# ptraker-client — Project Context for Claude
+# ptraker-client — Claude Development Guide
 
-This file provides context for Claude (VSCode extension and claude.ai chat)
-about the ptraker React frontend architecture, decisions made, and plans.
+## Stack
+- React 19 / Vite 6
+- Ant Design v6
+- React Router v7
+- Axios (api.js with auth interceptor + 401 refresh)
+- Recharts (charts on Analytics tab)
+- @supabase/supabase-js (auth client only — supabaseAuth)
 
-Last updated: May 2026
+## Ant Design v6 Breaking Changes
+- `Space direction="vertical"` → `Space orientation="vertical"`
+- `Divider type="vertical"` → `Divider orientation="vertical"`
+- `Statistic valueStyle` → `Statistic styles={{ content: {...} }}`
+- `Alert message=` for JSX → use `Alert description=` instead
+- Never use `<form>` tags in React — use onClick/onChange handlers
 
----
+## Key Patterns
 
-## What This App Does
+### Auth Store (3 files for Fast Refresh)
+- `src/store/context.js`, `AuthContext.jsx`, `useAuth.js`
+- Always import `useAuth` from `../store/useAuth`
 
-portfolioTraker (ptraker) is a personal investment portfolio tracker frontend.
-Tracks $2M+ across 8 accounts (LPL brokerage/retirement, CFCU bank, NJSD 403b/457).
-Multi-user with role-based access (admin/user/viewer) and portfolio sharing.
-
----
-
-## Repositories
-
-- **Client:** https://github.com/dschoepel/ptraker-client (this repo)
-- **API:** https://github.com/dschoepel/ptraker-api
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | React 19 + Vite 6 |
-| UI Library | Ant Design v6 |
-| Routing | React Router v7 |
-| HTTP | Axios |
-| Charts | Recharts |
-| Auth (direct) | @supabase/supabase-js |
-
----
-
-## Key ANTD v6 API Changes
-
-```jsx
-// Statistic — valueStyle is deprecated
-styles={{ content: { color: '#fff' } }}
-
-// Space — direction is deprecated
-<Space orientation="vertical">
-
-// Never use Date.now() in render — use new Date().getTime()
-```
-
----
-
-## Brand Colors
-
+### Guard API calls with auth
 ```javascript
-import { brandColors } from '../theme';
-// brandColors.gold          #f5a623
-// brandColors.darkBg        #1a1d23
-// brandColors.darkCard      #22262e
-// brandColors.darkBorder    #2e3340
-// brandColors.darkHover     #2a2d35
-// brandColors.textPrimary   #ffffff
-// brandColors.textSecondary #a0a0a0
-// brandColors.textMuted     #6b7280
-// brandColors.gain          #52c41a
-// brandColors.loss          #ff4d4f
-// brandColors.neutral       #8c8c8c
+const { user } = useAuth();
+useEffect(() => {
+  if (!user) return; // wait for auth before API calls
+  // ... fetch data
+}, [user]);
 ```
 
----
-
-## Project Structure
-
-```
-src/
-  theme/index.js            — ANTD design tokens + brandColors
-  store/
-    context.js              — AuthContext createContext only (no JSX)
-    AuthContext.jsx         — AuthProvider component only
-    useAuth.js              — useAuth hook only
-  services/
-    api.js                  — Axios + auth interceptor + token refresh
-    auth.service.js         — login, logout, profile, forgotPassword, resetPassword
-                              exports supabaseAuth for direct Supabase calls
-    dashboard.service.js    — dashboard, positions, accounts, import,
-                              prices, watchlist services
-    admin.service.js        — adminService, sharesService, userService
-  utils/
-    formatters.js           — formatCurrency, formatPercent, formatShares,
-                              formatDate, formatDateTime, gainLossColor,
-                              institutionName, accountTypeName, assetTypeName
-  layouts/
-    AppLayout.jsx           — sidebar (desktop) + bottom tab bar (mobile)
-                              nav items filtered by role (viewer hides Accounts/Import)
-                              username click → /profile, avatar click → dropdown (Sign out)
-  pages/
-    Login.jsx               — three modes: login / forgot / otp
-    ResetPassword.jsx       — handles both OTP path and email link (PASSWORD_RECOVERY)
-    SetPassword.jsx         — new user invite acceptance + password setup
-    Dashboard.jsx           — collapsible accounts, shared portfolio tabs,
-                              filter panel (institution, account, sort)
-    Accounts.jsx            — full CRUD + expandable positions + delete position
-                              column sorts: name, institution, type
-    Import.jsx              — 3-step wizard, file + manual entry
-    Watchlist.jsx           — sparkline charts, symbol search
-    Profile.jsx             — profile, privacy toggle, portfolio sharing,
-                              upgrade request, delete account with data export
-    Admin.jsx               — user management, invite, role requests, notifications
-  App.jsx                   — routing, theme, auth provider
-                              invite token detection at module level
-  main.jsx                  — entry point
-  index.css                 — minimal reset
-```
-
----
-
-## Auth Pattern
-
-Three files to avoid Fast Refresh warnings:
-- `context.js` — createContext only
-- `AuthContext.jsx` — AuthProvider only
-- `useAuth.js` — useAuth hook only
-
+### useEffect with async — never call setState synchronously
 ```javascript
-// Lazy useState from localStorage — no useEffect
-const [token, setToken] = useState(() => localStorage.getItem('ptraker_token') || null);
+// WRONG:
+useEffect(() => { loadData(); }, [loadData]);
+// CORRECT:
+useEffect(() => {
+  let cancelled = false;
+  const load = async () => {
+    const data = await fetchSomething();
+    if (!cancelled) setState(data);
+  };
+  load();
+  return () => { cancelled = true; };
+}, []);
 ```
 
-### Password Reset — Three modes in Login.jsx
-- `login` — email + password
-- `forgot` — enter email → calls Express API `/auth/forgot-password`
-  API uses `generateLink` + nodemailer (GoTrue silently skips emails)
-  Email contains branded HTML with Reset button + 6-digit OTP code
-- `otp` — enter 6-digit code → `supabaseAuth.auth.verifyOtp()` → navigate to /reset-password
+### useCallback for functions in useEffect deps
+```javascript
+const loadAccounts = useCallback(async () => { ... }, []);
+useEffect(() => {
+  let cancelled = false;
+  const run = async () => { await loadAccounts(); };
+  run();
+  return () => { cancelled = true; };
+}, [loadAccounts]);
+```
 
-### ResetPassword.jsx — Two paths
-- **OTP path:** token in localStorage from verifyOtp → `setSession()` → show form
-- **Email link path:** listen for `PASSWORD_RECOVERY` event from supabaseAuth
+### Never define components inside other components
+All sub-components go OUTSIDE the parent component function.
 
-### Invite Token Detection
-Module-level in `App.jsx` (before React renders):
+### refreshKey pattern for re-fetching
+```javascript
+const [refreshKey, setRefreshKey] = useState(0);
+useEffect(() => { fetchData(); }, [refreshKey]);
+// trigger: setRefreshKey(k => k + 1);
+```
+
+## Services
+- `api.js` — Axios instance, auto-injects Bearer token, handles 401 refresh
+- `auth.service.js` — supabaseAuth client; forgotPassword calls Express API
+- `dashboard.service.js` — dashboardService, positionService, accountService, importService, priceService, watchlistService
+- `admin.service.js` — adminService, sharesService, userService
+
+## Pages & Access
+| Page | Path | Roles |
+|---|---|---|
+| Dashboard | /dashboard | all |
+| Accounts | /accounts | admin, user |
+| Import | /import | admin, user |
+| Watchlist | /watchlist | all |
+| Profile/Settings | /profile | all |
+| Admin | /admin | admin only |
+
+## Role Checks
+```javascript
+const isAdmin  = user?.role === 'admin'  || user?.user_metadata?.role === 'admin';
+const isViewer = user?.role === 'viewer' || user?.user_metadata?.role === 'viewer';
+```
+
+## Invite Token Detection (App.jsx module level — before React renders)
 ```javascript
 const hash = window.location.hash;
 if (hash) {
@@ -150,164 +102,38 @@ if (hash) {
 }
 ```
 
-### Dev Email Issues
-- Password reset/invite links: `https://10.0.10.60` → change to `http://10.0.10.60:8100`
-- Fixed in `admin.controller.js` and `auth.controller.js` with `.replace()`
+## Mobile / Responsive
+- `isMobile = !screens.md` (from `Grid.useBreakpoint()`)
+- Accounts page: card list on mobile, table on desktop
+- Dashboard: card layout adapts, filter panel collapses
+- Header rows: use `flexWrap: 'wrap'` and `gap` for mobile wrapping
 
----
+## Dashboard Architecture
+- `SummaryCards` — net worth, cost basis, gain/loss, gain % stats
+- `PortfolioView` — reusable, accepts `isOwn`, `isViewer`, `readOnly` props
+- `AnalyticsView` — charts tab: institution donut+bar, account type donut, cash bar
+- Tabs: My Portfolio | Analytics | [shared portfolios if any]
 
-## Environment Variables
-
-```env
-VITE_API_URL=http://localhost:5000/api/v1
-VITE_SUPABASE_URL=http://10.0.10.60:8100
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
-
----
-
-## User Roles
-
-| Role | Accounts | Import | Watchlist | Settings | Admin | Dashboard |
-|---|---|---|---|---|---|---|
-| admin | ✅ | ✅ | ✅ | ✅ | ✅ | Own + shared |
-| user | ✅ | ✅ | ✅ | ✅ | ❌ | Own + shared |
-| viewer | ❌ | ❌ | ✅ | ✅ | ❌ | Empty state + shared |
-
-### Nav filtering in AppLayout.jsx
-```javascript
-const isAdmin  = user?.role === 'admin'  || user?.user_metadata?.role === 'admin';
-const isViewer = user?.role === 'viewer' || user?.user_metadata?.role === 'viewer';
-```
-
----
-
-## Component Rules
-
-**Never define components inside other components.**
-**Never call setState synchronously in useEffect — wrap in async function.**
-**Never use Date.now() in render — use new Date().getTime().**
-**Use useCallback for functions in useEffect dependency arrays.**
-
-### refreshKey pattern:
-```javascript
-const [refreshKey, setRefreshKey] = useState(0);
-useEffect(() => { fetchData(); }, [refreshKey]);
-setRefreshKey(k => k + 1);
-```
-
-### Cancelled flag for async useEffect:
-```javascript
-useEffect(() => {
-  let cancelled = false;
-  const fetch = async () => {
-    const data = await api();
-    if (!cancelled) setState(data);
-  };
-  fetch();
-  return () => { cancelled = true; };
-}, []);
-```
-
----
-
-## Dashboard — Key Details
-
-- Loads own dashboard + shares list in parallel on mount
-- Shows tabs when user has shared portfolios
-- Viewers with no own accounts: empty state with Request Upgrade button, auto-switches to first shared tab
-- `PortfolioView` reusable for own and shared portfolios
-- `readOnly=true` on shared views hides Refresh Prices button
-- `isOwn=true` + `isViewer=true` + no accounts → empty state
-
-### Filter Panel (in PortfolioView)
-- Sort by: Value desc, Gain/Loss desc, Name asc
-- Filter by institution (checkboxes)
-- Filter by account (checkboxes — filtered by selected institutions)
-- When institution deselected, clears accounts from that institution
-- Filter button turns gold when active, shows "Filtered" label
-- Clear filters button resets all
-
-### Cash Account Display Rules
-Checking/savings accounts show `—` for Gain/Loss and Today in both header and summary row.
-
----
-
-## Accounts Page
-
-- Full CRUD with Popconfirm on delete
-- **Desktop:** expandable table rows show positions, column sorts (name, institution, type)
-- **Mobile:** card list with tap-to-expand positions inline
-- `isMobile = !screens.md` switches between views
-- Delete individual positions via `positionService.remove(id)`
-- `showSorterTooltip={false}` on desktop Table
-- Column sort note: use `a.type` not `a.account_type` for type sorter
-
----
-
-## Profile / Settings Page
-
-- Display name edit
-- Privacy toggle: `discoverable` field — controls visibility in sharing dropdown
-- Portfolio Sharing:
-  - "Existing user" mode: dropdown of discoverable users (name only, not email)
-  - "Invite someone new" mode: email input → auto-invite as viewer + share created
-- Request Upgrade section (viewers only)
-- Delete Account flow:
-  1. Modal opens with Download My Data button
-  2. Checkbox: "I understand this cannot be undone"
-  3. Delete button only enabled after checkbox checked
-  4. Download exports JSON via `GET /api/v1/user/export`
-
----
-
-## Admin Page
-
-- User list with role change dropdown and delete (trash) button
-- Cannot delete self or last admin
-- Invite user modal (email + role)
-- Role upgrade requests with approve/deny
-- Notification settings: Ntfy + Email, collapsible panels, Send test button
-
-### Notification Settings stored in profiles.notification_settings JSONB:
-```json
-{
-  "ntfy":  {"enabled": true, "url": "https://ntfy.schoepels.com", "topic": "ptraker", "token": ""},
-  "email": {"enabled": true, "recipient": "dave@theschoepels.com"}
-}
-```
-
----
+## Analytics Charts (Recharts)
+Data derived client-side from `accounts[]` and `positions[]`:
+- Institution: group accounts by `institution`, sum `total_current_value` / `total_cost_basis`
+- Account Type: group by `account_type`
+- Cash: cash = checking/savings accounts + CASH-type positions in investment accounts
+- Colors: CHART_COLORS array cycles through 10 distinct colors
 
 ## Import Page
+- Multi-account importers (`multiAccount: true`): no accountId needed, auto-matched
+- Single-account: requires accountId selection
+- `isMultiAccount` derived from `importers.find(i => i.id === selectedImporter)?.multiAccount`
+- Results: multi-account shows Account Breakdown card with per-account row counts
+- History: loaded separately (non-fatal — failure never blocks page or import)
 
-### Manual Entry modes
-- **Cash Balance** — CASH position, balance = shares, cost basis = 0
-- **Fund/Stock** — ticker autocomplete, market value → shares back-calculated,
-  price auto-refreshed after save, cost basis from statement
+## Environment Variables
+```
+VITE_API_URL=http://localhost:5000/api/v1
+VITE_SUPABASE_URL=http://10.0.10.60:8100
+VITE_SUPABASE_ANON_KEY=<key>
+```
 
----
-
-## Pages Status
-
-| Page | Status | Notes |
-|---|---|---|
-| Login | ✅ | Three modes: login/forgot/otp |
-| Reset Password | ✅ | OTP + email link paths |
-| Set Password | ✅ | Invite acceptance |
-| Dashboard | ✅ | Tabs, filter panel, viewer empty state |
-| Accounts | ✅ | CRUD, positions, column sorts |
-| Import | ✅ | File + manual, sync-delete |
-| Watchlist | ✅ | Sparklines, symbol search |
-| Profile/Settings | ✅ | Privacy, sharing, export, delete |
-| Admin | ✅ | Users, invite, roles, notifications |
-
----
-
-## TODO
-
-- [ ] Mobile view for Accounts page
-- [ ] Merrill Lynch CSV importer
-- [ ] Schwab CSV importer
-- [ ] LPL QFX importer
-- [ ] Production deployment (Jupiter VPS + ptraker.com)
+## Pending / TODO
+- [ ] Production build / deployment to ptraker.com
