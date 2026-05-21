@@ -1,3 +1,23 @@
+# Release Notes — v1.2.1
+
+**Date:** 2026-05-21
+**Type:** Patch — force dark mode on all devices
+
+## Summary
+
+Fixes invisible content on iOS/iPadOS devices set to Light mode. The app uses
+hardcoded dark colors throughout, so the light theme produced white text on white
+cards. Dark theme is now always applied regardless of OS color scheme preference.
+
+## Deployment
+
+```bash
+git tag v1.2.1
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.2.0
 
 **Date:** 2026-05-21

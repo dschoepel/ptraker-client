@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.2.1] — 2026-05-21
+
+### Fixed
+- Mobile/iPad light mode: app now always uses dark theme regardless of OS color scheme setting; all components use hardcoded dark colors so light mode rendered white-on-white
+
+---
+
 ## [1.2.0] — 2026-05-21
 
 ### Added

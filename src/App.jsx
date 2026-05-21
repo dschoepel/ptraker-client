@@ -2,7 +2,7 @@ import { ConfigProvider, theme as antdTheme, App as AntdApp } from "antd";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./store/AuthContext";
 import { useAuth } from "./store/useAuth";
-import { darkTheme, lightTheme } from "./theme";
+import { darkTheme } from "./theme";
 import ResetPassword from "./pages/ResetPassword";
 import Watchlist from "./pages/Watchlist";
 import Admin from "./pages/Admin";
@@ -47,17 +47,11 @@ const ProtectedRoute = ({ children }) => {
 // ThemedApp — applies correct theme based on system preference
 // =============================================================================
 const ThemedApp = () => {
-  // Detect system color scheme preference
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const selectedTheme = prefersDark ? darkTheme : lightTheme;
-
   return (
     <ConfigProvider
       theme={{
-        algorithm: prefersDark
-          ? antdTheme.darkAlgorithm
-          : antdTheme.defaultAlgorithm,
-        ...selectedTheme,
+        algorithm: antdTheme.darkAlgorithm,
+        ...darkTheme,
       }}
     >
       <AntdApp>
