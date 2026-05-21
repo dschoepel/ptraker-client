@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import {
   Steps, Card, Select, Button, Upload, Typography, Alert,
   Table, Tag, Space, Divider, App as AntdApp, Spin, Checkbox,
-  Tooltip, Form, Input, InputNumber
+  Tooltip, Form, Input, InputNumber, Radio
 } from 'antd';
 import {
   UploadOutlined, CheckCircleOutlined, CloseCircleOutlined,
   WarningOutlined, InboxOutlined, ReloadOutlined, StarOutlined,
   EditOutlined
 } from '@ant-design/icons';
+import api from '../services/api';
 import { importService, accountService, watchlistService } from '../services/dashboard.service';
 import { useAuth } from '../store/useAuth';
 import { formatCurrency, formatPercent, formatDate, institutionName, gainLossColor } from '../utils/formatters';
@@ -247,20 +248,47 @@ const StepUploadFile = ({
 );
 
 // =============================================================================
-// Step 2b — Manual Entry (for cash/bank accounts with no recent transactions)
+// Step 2b — Manual Entry (cash balance or fund/stock position)
 // =============================================================================
 const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
   const [form] = Form.useForm();
+  const [mode, setMode] = useState('cash');
+  const [tickerOptions, setTickerOptions] = useState([]);
+  const [searching, setSearching] = useState(false);
 
-  // Filter to cash-type accounts
-  const cashAccounts = accounts.filter(a =>
-    ['checking', 'savings', 'other'].includes(a.type)
-  );
+  const cashAccounts       = accounts.filter(a => ['checking', 'savings', 'other'].includes(a.type));
+  const investmentAccounts = accounts.filter(a => ['brokerage', 'retirement'].includes(a.type));
+  const filteredAccounts   = mode === 'cash' ? cashAccounts : investmentAccounts;
+
+  const handleModeChange = (e) => {
+    setMode(e.target.value);
+    form.resetFields();
+    setTickerOptions([]);
+    if (e.target.value === 'position') {
+      form.setFieldsValue({ asOfDate: new Date().toISOString().split('T')[0] });
+    }
+  };
+
+  const handleTickerSearch = async (q) => {
+    if (!q) { setTickerOptions([]); return; }
+    setSearching(true);
+    try {
+      const res = await api.get('/watchlist/search', { params: { q } });
+      setTickerOptions((res.data.results || []).map(r => ({
+        value: r.ticker,
+        label: `${r.ticker} — ${r.name}`,
+      })));
+    } catch {
+      setTickerOptions([]);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      await onSave(values);
+      await onSave({ ...values, mode });
     } catch {
       // validation shown inline
     }
@@ -268,9 +296,21 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
 
   return (
     <div style={{ maxWidth: 480 }}>
+      <Radio.Group
+        value={mode}
+        onChange={handleModeChange}
+        optionType="button"
+        buttonStyle="solid"
+        style={{ marginBottom: 20 }}
+      >
+        <Radio.Button value="cash">Cash Balance</Radio.Button>
+        <Radio.Button value="position">Fund / Stock</Radio.Button>
+      </Radio.Group>
+
       <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 20 }}>
-        Enter the current balance for a cash or bank account.
-        Use this when there are no recent transactions to export.
+        {mode === 'cash'
+          ? 'Enter the current balance for a checking, savings, or cash account. Use this when there are no recent transactions to export.'
+          : 'Enter a fund or stock position by market value. Shares will be back-calculated from the current price.'}
       </Text>
 
       <Form form={form} layout="vertical" requiredMark={false}>
@@ -285,7 +325,7 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
             showSearch
             optionFilterProp="label"
           >
-            {cashAccounts.map(acc => (
+            {filteredAccounts.map(acc => (
               <Option key={acc.id} value={acc.id} label={acc.name}>
                 <Space>
                   <Text style={{ color: '#fff' }}>{acc.name}</Text>
@@ -298,28 +338,86 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
           </Select>
         </Form.Item>
 
-        <Form.Item
-          name="balance"
-          label="Current Balance"
-          rules={[
-            { required: true, message: 'Balance is required' },
-            { type: 'number', min: 0, message: 'Balance must be positive' },
-          ]}
-        >
-          <InputNumber
-            prefix="$"
-            precision={2}
-            size="large"
-            style={{ width: '100%' }}
-            placeholder="0.00"
-            formatter={val => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={val => val.replace(/\$\s?|(,*)/g, '')}
-          />
-        </Form.Item>
-
-        <Form.Item name="assetName" label="Description (optional)">
-          <Input placeholder="e.g. Checking Account Balance" />
-        </Form.Item>
+        {mode === 'cash' ? (
+          <>
+            <Form.Item
+              name="balance"
+              label="Current Balance"
+              rules={[
+                { required: true, message: 'Balance is required' },
+                { type: 'number', min: 0, message: 'Balance must be positive' },
+              ]}
+            >
+              <InputNumber
+                prefix="$"
+                precision={2}
+                size="large"
+                style={{ width: '100%' }}
+                placeholder="0.00"
+                formatter={val => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={val => val.replace(/\$\s?|(,*)/g, '')}
+              />
+            </Form.Item>
+            <Form.Item name="assetName" label="Description (optional)">
+              <Input placeholder="e.g. Checking Account Balance" />
+            </Form.Item>
+          </>
+        ) : (
+          <>
+            <Form.Item
+              name="ticker"
+              label="Ticker / Symbol"
+              rules={[{ required: true, message: 'Ticker is required' }]}
+            >
+              <Select
+                showSearch
+                size="large"
+                placeholder="Search ticker (e.g. VFIAX, AAPL)"
+                filterOption={false}
+                onSearch={handleTickerSearch}
+                loading={searching}
+                notFoundContent={searching ? <Spin size="small" /> : null}
+                options={tickerOptions}
+              />
+            </Form.Item>
+            <Form.Item
+              name="marketValue"
+              label="Market Value"
+              rules={[
+                { required: true, message: 'Market value is required' },
+                { type: 'number', min: 0.01, message: 'Must be greater than 0' },
+              ]}
+            >
+              <InputNumber
+                prefix="$"
+                precision={2}
+                size="large"
+                style={{ width: '100%' }}
+                placeholder="0.00"
+                formatter={val => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={val => val.replace(/\$\s?|(,*)/g, '')}
+              />
+            </Form.Item>
+            <Form.Item name="costBasis" label="Cost Basis (optional)">
+              <InputNumber
+                prefix="$"
+                precision={2}
+                size="large"
+                style={{ width: '100%' }}
+                placeholder="0.00"
+                formatter={val => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={val => val.replace(/\$\s?|(,*)/g, '')}
+              />
+            </Form.Item>
+            <Form.Item
+              name="asOfDate"
+              label="As Of Date"
+              rules={[{ required: true, message: 'Date is required' }]}
+            >
+              <Input type="date" size="large" style={{ width: '100%' }} />
+            </Form.Item>
+          </>
+        )}
       </Form>
 
       <Space style={{ marginTop: 8 }}>
@@ -332,7 +430,7 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
           onClick={handleSave}
           style={{ fontWeight: 600 }}
         >
-          Save Balance
+          {mode === 'cash' ? 'Save Balance' : 'Save Position'}
         </Button>
       </Space>
     </div>
@@ -656,25 +754,23 @@ const Import = () => {
   const handleManualSave = async (values) => {
     setImporting(true);
     try {
-      await importService.manualEntry(
-        values.accountId,
-        'CASH',
-        values.balance,
-        values.assetName || 'Cash Balance',
-        'cash'
-      );
+      const { mode, accountId, balance, ticker, marketValue, costBasis, asOfDate } = values;
+      await importService.manualEntry(accountId, mode, { balance, ticker, marketValue, costBasis, asOfDate });
       setResult({
         status: 'success',
         rowsImported: 1,
-        balance: values.balance,
+        ...(mode === 'cash' ? { balance } : {}),
       });
       setCurrentStep(2);
       importService.getHistory()
         .then(d => setHistory(d.history || []))
         .catch(() => {});
-      message.success(`Balance saved: ${formatCurrency(values.balance)}`);
+      message.success(mode === 'cash'
+        ? `Balance saved: ${formatCurrency(balance)}`
+        : `Position saved: ${ticker}`
+      );
     } catch (err) {
-      message.error(err.response?.data?.message || 'Failed to save balance');
+      message.error(err.response?.data?.message || 'Failed to save entry');
     } finally {
       setImporting(false);
     }
@@ -708,7 +804,7 @@ const Import = () => {
 
   const steps = [
     { title: 'Institution' },
-    { title: isManual ? 'Enter Balance' : 'Upload' },
+    { title: isManual ? 'Manual Entry' : 'Upload' },
     { title: 'Results' },
   ];
 

@@ -68,20 +68,19 @@ export const importService = {
     const response = await api.get('/import/history');
     return response.data;
   },
-  manualEntry: async (accountId, ticker, balance, assetName, assetType, marketValue, shares, costBasis, name, defaultAssetType) => {
-  const response = await api.post('/import/manual', {
-    importerId: 'manual',
-    accountId,
-    ticker,
-    balance,
-    marketValue,
-    shares,
-    costBasis,
-    assetName: name || assetName,
-    assetType: defaultAssetType || assetType,
-  });
-  return response.data;
-},
+  manualEntry: async (accountId, mode, fields = {}) => {
+    const payload = { accountId, mode };
+    if (mode === 'cash') {
+      payload.shares = fields.balance;
+    } else {
+      payload.ticker     = fields.ticker;
+      payload.marketValue = fields.marketValue;
+      payload.costBasis  = fields.costBasis;
+      payload.asOfDate   = fields.asOfDate;
+    }
+    const response = await api.post('/import/manual', payload);
+    return response.data;
+  },
 };
 
 export const priceService = {
