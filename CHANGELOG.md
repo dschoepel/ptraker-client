@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.1.0] — 2026-05-21
+
+### Added
+- Manual entry now supports two modes via Radio toggle: **Cash Balance** (checking/savings/other accounts) and **Fund / Stock** (brokerage/retirement accounts)
+- Fund/Stock mode: ticker autocomplete via Yahoo Finance search, market value input, cost basis, as-of date; API back-calculates shares from current price
+
+### Fixed
+- `import { AuthProvider } from "./store/AuthContext"` — corrected case for Linux case-sensitive filesystem (was `authContext`)
+- `importService.manualEntry` signature rewritten to match API contract (`mode`, `fields` object)
+
+---
+
 ## [1.0.0] — 2026-05-21
 
 ### Added
