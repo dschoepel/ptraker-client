@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Typography, Card, Table, Button, Tag, Space, Modal, Form,
   Input, Select, Spin, Switch, Collapse,
-   Badge,  Tooltip, Popconfirm
+  Badge, Tooltip, Popconfirm, Grid, Divider,
 } from 'antd';
 import {
   UserAddOutlined, CheckOutlined, CloseOutlined,
@@ -255,6 +255,8 @@ const NotificationSettings = () => {
 // =============================================================================
 // Admin Page
 // =============================================================================
+const { useBreakpoint } = Grid;
+
 const Admin = () => {
   const [users, setUsers]               = useState([]);
   const [requests, setRequests]         = useState([]);
@@ -264,6 +266,8 @@ const Admin = () => {
   const [inviting, setInviting]         = useState(false);
   const [refreshKey, setRefreshKey]     = useState(0);
   const message = useMessage();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
 
   useEffect(() => {
     let cancelled = false;
@@ -516,13 +520,58 @@ const Admin = () => {
           </Button>
         }
       >
-        <Table
-          dataSource={users}
-          columns={userColumns}
-          rowKey="id"
-          size="small"
-          pagination={false}
-        />
+        {isMobile ? (
+          <div>
+            {users.map((user, i) => (
+              <div key={user.id}>
+                {i > 0 && <Divider style={{ borderColor: brandColors.darkBorder, margin: '12px 0' }} />}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ color: '#fff', fontWeight: 600, display: 'block' }}>
+                      {user.display_name || 'No name set'}
+                    </Text>
+                    <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block', wordBreak: 'break-all' }}>
+                      {user.email}
+                    </Text>
+                    <div style={{ marginTop: 8 }}>
+                      <RoleBadge role={user.role} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
+                    <Select
+                      value={user.role}
+                      size="small"
+                      style={{ width: 120 }}
+                      onChange={(role) => handleRoleChange(user.id, role)}
+                    >
+                      <Option value="admin">Admin</Option>
+                      <Option value="user">User</Option>
+                      <Option value="viewer">Viewer</Option>
+                    </Select>
+                    <Popconfirm
+                      title={`Delete ${user.display_name || user.email}?`}
+                      description="This permanently deletes their account and all their data."
+                      onConfirm={() => handleDeleteUser(user.id)}
+                      okText="Delete"
+                      cancelText="Cancel"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button type="text" icon={<DeleteOutlined />} size="small" danger />
+                    </Popconfirm>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Table
+            dataSource={users}
+            columns={userColumns}
+            rowKey="id"
+            size="small"
+            pagination={false}
+          />
+        )}
       </Card>
 
       {/* Role Requests */}
@@ -546,6 +595,7 @@ const Admin = () => {
             rowKey="id"
             size="small"
             pagination={false}
+            scroll={{ x: 600 }}
           />
         )}
       </Card>

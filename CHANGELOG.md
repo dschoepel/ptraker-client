@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.2.2] — 2026-05-21
+
+### Fixed
+- Admin page: Users and Role Requests tables now scroll horizontally on mobile instead of overflowing off-screen
+
+---
+
+## [1.2.2] — 2026-05-21
+
+### Fixed
+- Admin page: Users section now renders as a card list on mobile instead of an overflowing table — shows name/email, role badge, role select, and delete button in a clean layout
+- Role Requests table gets horizontal scroll on mobile
+
+---
+
 ## [1.2.1] — 2026-05-21
 
 ### Fixed

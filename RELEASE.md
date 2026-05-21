@@ -1,3 +1,42 @@
+# Release Notes — v1.2.2
+
+**Date:** 2026-05-21
+**Type:** Patch — Admin page mobile overflow fix
+
+## Summary
+
+Admin page Users and Role Requests tables now have `scroll={{ x }}` set so
+they scroll horizontally on narrow screens instead of overflowing off the right edge.
+
+## Deployment
+
+```bash
+git tag v1.2.2
+git push origin main --tags
+```
+
+---
+
+# Release Notes — v1.2.2
+
+**Date:** 2026-05-21
+**Type:** Patch — Admin page mobile layout
+
+## Summary
+
+Admin Users section now renders as a responsive card list on mobile (< md breakpoint)
+instead of a cramped overflowing table. Each card shows name, email, role badge,
+role change select, and delete button. Role Requests table gets horizontal scroll.
+
+## Deployment
+
+```bash
+git tag v1.2.2
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.2.1
 
 **Date:** 2026-05-21
