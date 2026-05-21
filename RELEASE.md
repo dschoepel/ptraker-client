@@ -1,3 +1,27 @@
+# Release Notes — v1.2.0
+
+**Date:** 2026-05-21
+**Type:** Minor — footer with version info + closeable notifications
+
+## Summary
+
+Adds a footer to the desktop layout with the tagline "Private portfolio tracking
+across all your accounts. No ads, no data sharing." on the left and live Client /
+API version numbers on the right (API version fetched from `GET /api/v1/version`).
+
+Switches all toast notifications from Ant Design's `message` API to the
+`notification` API, which has a proper built-in close button and 8-second
+default duration. All pages share a single `useMessage` hook for consistency.
+
+## Deployment
+
+```bash
+git tag v1.2.0
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.1.0
 
 **Date:** 2026-05-21

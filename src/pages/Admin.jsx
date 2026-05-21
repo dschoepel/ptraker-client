@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Typography, Card, Table, Button, Tag, Space, Modal, Form,
-  Input, Select, App as AntdApp, Spin,  Switch, Collapse,
+  Input, Select, Spin, Switch, Collapse,
    Badge,  Tooltip, Popconfirm
 } from 'antd';
 import {
@@ -12,6 +12,7 @@ import {
 import { adminService } from '../services/admin.service';
 import { brandColors } from '../theme';
 import { formatDateTime } from '../utils/formatters';
+import useMessage from '../hooks/useMessage';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -97,7 +98,7 @@ const NotificationSettings = () => {
   const [testing, setTesting]       = useState(null);
   const [ntfyForm]                  = Form.useForm();
   const [emailForm]                 = Form.useForm();
-  const { message }                 = AntdApp.useApp();
+  const message = useMessage();
 
   useEffect(() => {
     let cancelled = false;
@@ -262,7 +263,7 @@ const Admin = () => {
   const [inviteOpen, setInviteOpen]     = useState(false);
   const [inviting, setInviting]         = useState(false);
   const [refreshKey, setRefreshKey]     = useState(0);
-  const { message }                     = AntdApp.useApp();
+  const message = useMessage();
 
   useEffect(() => {
     let cancelled = false;

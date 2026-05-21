@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.2.0] — 2026-05-21
+
+### Added
+- Footer on desktop layout: tagline on the left, Client and API version numbers on the right
+- API version fetched live from `GET /api/v1/version` on load
+
+### Changed
+- Toast notifications switched from `message` API to `notification` API — proper built-in close button, 8-second duration
+- All pages now use shared `useMessage` hook (`src/hooks/useMessage.js`) instead of `AntdApp.useApp().message` directly
+
+---
+
 ## [1.1.0] — 2026-05-21
 
 ### Added

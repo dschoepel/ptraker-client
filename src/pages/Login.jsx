@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Form, Input, Button, Typography, Alert, App as AntdApp } from 'antd';
+import { Form, Input, Button, Typography, Alert } from 'antd';
+import useMessage from '../hooks/useMessage';
 import { UserOutlined, LockOutlined, NumberOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/useAuth';
@@ -25,7 +26,7 @@ const Login = () => {
   const [successMsg, setSuccessMsg] = useState(null);
   const { login }               = useAuth();
   const navigate                = useNavigate();
-  const { message }             = AntdApp.useApp();
+  const message = useMessage();
   const [form]                  = Form.useForm();
 
   const handleSubmit = async (values) => {

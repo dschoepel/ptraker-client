@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Typography, Modal, Form, Input,
-  Select, Popconfirm, Alert, Spin, Grid, App as AntdApp, Tooltip,
+  Select, Popconfirm, Alert, Spin, Grid, Tooltip,
   Card, 
 } from 'antd';
 import {
@@ -9,6 +9,7 @@ import {
   CheckCircleOutlined, StopOutlined, RightOutlined,
 } from '@ant-design/icons';
 import { accountService, dashboardService, positionService } from '../services/dashboard.service';
+import useMessage from '../hooks/useMessage';
 import {
   formatCurrency, formatPercent, formatShares,
   gainLossColor, institutionName, accountTypeName, assetTypeName,
@@ -315,7 +316,7 @@ const Accounts = () => {
   const [expandedRows, setExpandedRows]     = useState([]);
   const screens                             = useBreakpoint();
   const isMobile                            = !screens.md;
-  const { message }                         = AntdApp.useApp();
+  const message = useMessage();
 
   const loadAccounts = useCallback(async () => {
     try {

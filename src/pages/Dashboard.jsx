@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Row, Col, Card, Statistic, Table, Tag, Typography,
-  Spin, Alert, Grid, Space, Collapse, Tabs, App as AntdApp,
+  Spin, Alert, Grid, Space, Collapse, Tabs,
   Button, Checkbox, Select,
 } from 'antd';
 import {
@@ -20,6 +20,7 @@ import {
 } from '../utils/formatters';
 import { brandColors } from '../theme';
 import { useAuth } from '../store/useAuth';
+import useMessage from '../hooks/useMessage';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -810,7 +811,7 @@ const Dashboard = () => {
   const [refreshing, setRefreshing]             = useState(false);
   const screens                                 = useBreakpoint();
   const isMobile                                = !screens.md;
-  const { message }                             = AntdApp.useApp();
+  const message = useMessage();
   const { user }                                = useAuth();
   const isViewer = user?.role === 'viewer' || user?.user_metadata?.role === 'viewer';
 

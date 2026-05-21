@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Steps, Card, Select, Button, Upload, Typography, Alert,
-  Table, Tag, Space, Divider, App as AntdApp, Spin, Checkbox,
+  Table, Tag, Space, Divider, Spin, Checkbox,
   Tooltip, Form, Input, InputNumber, Radio
 } from 'antd';
 import {
@@ -13,6 +13,7 @@ import api from '../services/api';
 import { importService, accountService, watchlistService } from '../services/dashboard.service';
 import { useAuth } from '../store/useAuth';
 import { formatCurrency, formatPercent, formatDate, institutionName, gainLossColor } from '../utils/formatters';
+import useMessage from '../hooks/useMessage';
 import { brandColors } from '../theme';
 
 const { Title, Text } = Typography;
@@ -666,7 +667,7 @@ const Import = () => {
   const [historyLoading, setHistoryLoading]   = useState(true);
   const [loadError, setLoadError]             = useState(null);
   const [addingToWatchlist, setAddingToWatchlist] = useState(null);
-  const { message }                           = AntdApp.useApp();
+  const message = useMessage();
 
   const selectedImporterObj = importers.find(i => i.id === selectedImporter);
   const isManual = selectedImporterObj?.isManual || false;

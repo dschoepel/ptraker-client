@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Typography, Card, Form, Input, Button, Space, App as AntdApp,
+  Typography, Card, Form, Input, Button, Space,
   Divider, Tag, Alert, Modal, Table, Popconfirm, Switch,
   Select, Radio, Checkbox,
 } from 'antd';
@@ -15,6 +15,7 @@ import { sharesService, userService } from '../services/admin.service';
 import api from '../services/api';
 import { brandColors } from '../theme';
 import { formatDateTime } from '../utils/formatters';
+import useMessage from '../hooks/useMessage';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -44,7 +45,7 @@ const SharingSection = () => {
   const [form]                              = Form.useForm();
   const [sharing, setSharing]               = useState(false);
   const [refreshKey, setRefreshKey]         = useState(0);
-  const { message }                         = AntdApp.useApp();
+  const message = useMessage();
 
   useEffect(() => {
     let cancelled = false;
@@ -295,7 +296,7 @@ const SharingSection = () => {
 const PrivacySection = () => {
   const [discoverable, setDiscoverable] = useState(true);
   const [saving, setSaving]             = useState(false);
-  const { message }                     = AntdApp.useApp();
+  const message = useMessage();
 
   useEffect(() => {
     const load = async () => {
@@ -360,7 +361,7 @@ const UpgradeSection = () => {
   const [modalOpen, setModalOpen]   = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form]                      = Form.useForm();
-  const { message }                 = AntdApp.useApp();
+  const message = useMessage();
 
   useEffect(() => {
     let cancelled = false;
@@ -458,7 +459,7 @@ const Profile = () => {
   const { user, updateUser, logout }  = useAuth();
   const [form]                        = Form.useForm();
   const [saving, setSaving]           = useState(false);
-  const { message }                   = AntdApp.useApp();
+  const message = useMessage();
   const navigate = useNavigate();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 const [deleteConfirmed, setDeleteConfirmed] = useState(false);

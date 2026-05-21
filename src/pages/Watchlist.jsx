@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Table, Button, Input, Typography, Tag, Space,
-  Popconfirm, Alert, Spin, App as AntdApp, Modal, Form, Tooltip, AutoComplete,
+  Popconfirm, Alert, Spin, Modal, Form, Tooltip, AutoComplete,
 } from 'antd';
 import {
   PlusOutlined, DeleteOutlined, EditOutlined,
@@ -10,6 +10,7 @@ import {
 import { AreaChart, Area, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { watchlistService } from '../services/dashboard.service';
 import { formatCurrency, formatPercent, gainLossColor } from '../utils/formatters';
+import useMessage from '../hooks/useMessage';
 import { brandColors } from '../theme';
 import api from '../services/api';
 
@@ -237,7 +238,7 @@ const Watchlist = () => {
   const [editItem, setEditItem]         = useState(null);
   const [saving, setSaving]             = useState(false);
   const [refreshKey, setRefreshKey]     = useState(0);
-  const { message }                     = AntdApp.useApp();
+  const message = useMessage();
 
   useEffect(() => {
     let cancelled = false;

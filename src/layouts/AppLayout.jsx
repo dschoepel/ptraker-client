@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Layout,
   Menu,
@@ -8,6 +8,8 @@ import {
   Typography,
   Grid,
 } from "antd";
+import pkg from "../../package.json";
+import api from "../services/api";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   DashboardOutlined,
@@ -25,7 +27,7 @@ import { SettingOutlined, SafetyOutlined } from "@ant-design/icons";
 // import { App as AntdApp } from 'antd';
 import { brandColors } from "../theme";
 
-const { Header, Sider, Content } = Layout;
+const { Header, Sider, Content, Footer } = Layout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
@@ -85,7 +87,12 @@ const Logo = ({ collapsed, onClick }) => (
 // =============================================================================
 const AppLayout = () => {
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
+  const [apiVersion, setApiVersion] = useState(null);
   const { user, logout } = useAuth();
+
+  useEffect(() => {
+    api.get('/version').then(r => setApiVersion(r.data.version)).catch(() => {});
+  }, []);
   const navigate = useNavigate();
   const location = useLocation();
   const screens = useBreakpoint();
@@ -369,9 +376,33 @@ const AppLayout = () => {
           </div>
         </Header>
 
-        <Content style={{ padding: 24, minHeight: "calc(100vh - 64px)" }}>
+        <Content style={{ padding: 24, minHeight: "calc(100vh - 64px - 40px)" }}>
           <Outlet />
         </Content>
+
+        <Footer style={{
+          padding: "10px 24px",
+          height: 40,
+          background: brandColors.darkCard,
+          borderTop: `1px solid ${brandColors.darkBorder}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}>
+          <Text style={{ color: brandColors.textMuted, fontSize: 11, fontStyle: "italic" }}>
+            Private portfolio tracking across all your accounts. No ads, no data sharing.
+          </Text>
+          <div style={{ display: "flex", gap: 16, flexShrink: 0 }}>
+            <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>
+              Client v{pkg.version}
+            </Text>
+            {apiVersion && (
+              <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>
+                API v{apiVersion}
+              </Text>
+            )}
+          </div>
+        </Footer>
       </Layout>
     </Layout>
   );

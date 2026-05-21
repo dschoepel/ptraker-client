@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Form, Input, Button, Typography, Alert, Result, App as AntdApp } from 'antd';
+import { Form, Input, Button, Typography, Alert, Result } from 'antd';
+import useMessage from '../hooks/useMessage';
 import { LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { brandColors } from '../theme';
@@ -28,7 +29,7 @@ const SetPassword = () => {
   const [ready, setReady]       = useState(false);
   const navigate                = useNavigate();
   const [form]                  = Form.useForm();
-  const { message }             = AntdApp.useApp();
+  const message = useMessage();
   
 
   useEffect(() => {
