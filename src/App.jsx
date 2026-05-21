@@ -1,6 +1,6 @@
 import { ConfigProvider, theme as antdTheme, App as AntdApp } from "antd";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./store/authContext";
+import { AuthProvider } from "./store/AuthContext";
 import { useAuth } from "./store/useAuth";
 import { darkTheme, lightTheme } from "./theme";
 import ResetPassword from "./pages/ResetPassword";
