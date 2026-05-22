@@ -7,7 +7,7 @@ import {
 import {
   UploadOutlined, CheckCircleOutlined, CloseCircleOutlined,
   WarningOutlined, InboxOutlined, ReloadOutlined, StarOutlined,
-  EditOutlined
+  EditOutlined, FileOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import api from '../services/api';
 import { importService, accountService, watchlistService } from '../services/dashboard.service';
@@ -166,110 +166,165 @@ const StepUploadFile = ({
   syncMode, onSyncModeChange,
   onBack, onImport, importing,
   isOFX,
-}) => (
-  <div style={{ maxWidth: 560 }}>
-    <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 16 }}>
-      {isOFX
-        ? 'Upload the file. All accounts will be matched automatically by account number.'
-        : 'Select the account and upload the exported file.'}
-    </Text>
+}) => {
+  const [fileLoading, setFileLoading] = useState(false);
 
-    {isOFX ? (
-      <Alert
-        type="info"
-        style={{ marginBottom: 20 }}
-        description="This file can contain multiple accounts. Each account will be matched to your portfolio automatically by the last 4 digits of the account number."
-      />
-    ) : (
-      <div style={{ marginBottom: 20 }}>
-        <Text style={{ color: brandColors.textSecondary, fontSize: 13, display: 'block', marginBottom: 4 }}>
-          Account
-          <Text style={{ color: brandColors.textMuted, fontSize: 12, marginLeft: 6 }}>
-            (optional — leave blank to auto-match by account number in file)
+  const handleBeforeUpload = (f) => {
+    setFileLoading(true);
+    setTimeout(() => {
+      onFileSelect(f);
+      setFileLoading(false);
+    }, 0);
+    return false;
+  };
+
+  const handleRemove = () => {
+    onRemoveFile();
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <div style={{ maxWidth: 560 }}>
+      <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 16 }}>
+        {isOFX
+          ? 'Upload the file. All accounts will be matched automatically by account number.'
+          : 'Select the account and upload the exported file.'}
+      </Text>
+
+      {isOFX ? (
+        <Alert
+          type="info"
+          style={{ marginBottom: 20 }}
+          description="This file can contain multiple accounts. Each account will be matched to your portfolio automatically by the last 4 digits of the account number."
+        />
+      ) : (
+        <div style={{ marginBottom: 20 }}>
+          <Text style={{ color: brandColors.textSecondary, fontSize: 13, display: 'block', marginBottom: 4 }}>
+            Account
+            <Text style={{ color: brandColors.textMuted, fontSize: 12, marginLeft: 6 }}>
+              (optional — leave blank to auto-match by account number in file)
+            </Text>
           </Text>
+          <Select
+            placeholder="Auto-match by account number"
+            value={selectedAccount}
+            onChange={onSelectAccount}
+            size="large"
+            style={{ width: '100%' }}
+            showSearch
+            optionFilterProp="label"
+            allowClear
+          >
+            {accounts.map(acc => (
+              <Option key={acc.id} value={acc.id} label={acc.name}>
+                <Space>
+                  <Text style={{ color: '#fff' }}>{acc.name}</Text>
+                  <Tag color="default" style={{ fontSize: 11 }}>
+                    {institutionName(acc.institution)}
+                  </Tag>
+                </Space>
+              </Option>
+            ))}
+          </Select>
+          {selectedAccount && (
+            <Alert
+              type="warning"
+              style={{ marginTop: 8 }}
+              description="All positions will be imported into the selected account."
+            />
+          )}
+        </div>
+      )}
+
+      <div style={{ marginBottom: 20 }}>
+        <Text style={{ color: brandColors.textSecondary, fontSize: 13, display: 'block', marginBottom: 8 }}>
+          Export File
         </Text>
-        <Select
-          placeholder="Auto-match by account number"
-          value={selectedAccount}
-          onChange={onSelectAccount}
-          size="large"
-          style={{ width: '100%' }}
-          showSearch
-          optionFilterProp="label"
-          allowClear
-        >
-          {accounts.map(acc => (
-            <Option key={acc.id} value={acc.id} label={acc.name}>
-              <Space>
-                <Text style={{ color: '#fff' }}>{acc.name}</Text>
-                <Tag color="default" style={{ fontSize: 11 }}>
-                  {institutionName(acc.institution)}
-                </Tag>
-              </Space>
-            </Option>
-          ))}
-        </Select>
-        {selectedAccount && (
-          <Alert
-            type="warning"
-            style={{ marginTop: 8 }}
-            description="All positions will be imported into the selected account."
-          />
+        {!file && (
+          <Spin spinning={fileLoading} tip="Loading file...">
+            <Dragger
+              accept=".csv,.qfx,.ofx"
+              maxCount={1}
+              showUploadList={false}
+              beforeUpload={handleBeforeUpload}
+              style={{ background: brandColors.darkHover, borderColor: brandColors.darkBorder }}
+            >
+              <p style={{ margin: '16px 0 8px' }}>
+                <InboxOutlined style={{ fontSize: 36, color: brandColors.gold }} />
+              </p>
+              <p style={{ color: '#fff', fontSize: 14, margin: '0 0 4px' }}>Click or drag file here</p>
+              <p style={{ color: brandColors.textMuted, fontSize: 12, margin: 0 }}>CSV, QFX, OFX</p>
+            </Dragger>
+          </Spin>
+        )}
+        {file && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '14px 16px',
+            background: brandColors.darkHover,
+            border: `2px solid ${brandColors.gold}`,
+            borderRadius: 8,
+          }}>
+            <FileOutlined style={{ fontSize: 28, color: brandColors.gold, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: 600, display: 'block' }}
+                ellipsis={{ tooltip: file.name }}>
+                {file.name}
+              </Text>
+              <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+                {formatFileSize(file.size)}
+              </Text>
+            </div>
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              onClick={handleRemove}
+              style={{ color: brandColors.textMuted, flexShrink: 0 }}
+              title="Remove file"
+            />
+          </div>
         )}
       </div>
-    )}
 
-    <div style={{ marginBottom: 20 }}>
-      <Text style={{ color: brandColors.textSecondary, fontSize: 13, display: 'block', marginBottom: 8 }}>
-        Export File
-      </Text>
-      <Dragger
-        accept=".csv,.qfx,.ofx"
-        maxCount={1}
-        fileList={file ? [file] : []}
-        beforeUpload={(f) => { onFileSelect(f); return false; }}
-        onRemove={onRemoveFile}
-        style={{ background: brandColors.darkHover, borderColor: brandColors.darkBorder }}
-      >
-        <p style={{ margin: '16px 0 8px' }}>
-          <InboxOutlined style={{ fontSize: 36, color: brandColors.gold }} />
-        </p>
-        <p style={{ color: '#fff', fontSize: 14, margin: '0 0 4px' }}>Click or drag file here</p>
-        <p style={{ color: brandColors.textMuted, fontSize: 12, margin: 0 }}>CSV, QFX, OFX</p>
-      </Dragger>
-    </div>
+      <div style={{ marginBottom: 24 }}>
+        <Tooltip title="Removes positions from the database that are no longer in the exported file.">
+          <Checkbox
+            checked={syncMode}
+            onChange={e => onSyncModeChange(e.target.checked)}
+            style={{ color: brandColors.textSecondary }}
+          >
+            Remove positions no longer in this file
+            <Text style={{ color: brandColors.textMuted, fontSize: 12, marginLeft: 6 }}>
+              (recommended for full position exports)
+            </Text>
+          </Checkbox>
+        </Tooltip>
+      </div>
 
-    <div style={{ marginBottom: 24 }}>
-      <Tooltip title="Removes positions from the database that are no longer in the exported file.">
-        <Checkbox
-          checked={syncMode}
-          onChange={e => onSyncModeChange(e.target.checked)}
-          style={{ color: brandColors.textSecondary }}
+      <Space>
+        <Button size="large" onClick={onBack}>Back</Button>
+        <Button
+          type="primary"
+          size="large"
+          icon={<UploadOutlined />}
+          disabled={!file}
+          loading={importing}
+          onClick={onImport}
+          style={{ fontWeight: 600 }}
         >
-          Remove positions no longer in this file
-          <Text style={{ color: brandColors.textMuted, fontSize: 12, marginLeft: 6 }}>
-            (recommended for full position exports)
-          </Text>
-        </Checkbox>
-      </Tooltip>
+          {importing ? 'Importing...' : 'Import File'}
+        </Button>
+      </Space>
     </div>
-
-    <Space>
-      <Button size="large" onClick={onBack}>Back</Button>
-      <Button
-        type="primary"
-        size="large"
-        icon={<UploadOutlined />}
-        disabled={!file}
-        loading={importing}
-        onClick={onImport}
-        style={{ fontWeight: 600 }}
-      >
-        {importing ? 'Importing...' : 'Import File'}
-      </Button>
-    </Space>
-  </div>
-);
+  );
+};
 
 // =============================================================================
 // Step 2b — Manual Entry (cash balance or fund/stock position)

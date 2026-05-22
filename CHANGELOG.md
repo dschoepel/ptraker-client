@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.1] — 2026-05-22
+
+### Changed
+- Import page: file upload Dragger replaced with spinner + prominent gold-bordered file card once a file is selected — file name and size are clearly displayed with a remove button
+
+---
+
 ## [1.4.0] — 2026-05-22
 
 ### Added

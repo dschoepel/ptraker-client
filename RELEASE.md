@@ -1,3 +1,24 @@
+# Release Notes — v1.4.1
+
+**Date:** 2026-05-22
+**Type:** Patch — import file upload UX improvements
+
+## Summary
+
+After selecting a file on the Import page, the Dragger area is now replaced by a
+clearly visible gold-bordered card showing the filename and file size, with a
+remove button to swap the file. A spinner with "Loading file..." text appears
+during the brief moment between file selection and the card appearing.
+
+## Deployment
+
+```bash
+git tag v1.4.1
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.4.0
 
 **Date:** 2026-05-22
