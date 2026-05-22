@@ -8,6 +8,30 @@
 - Recharts (charts on Analytics tab)
 - @supabase/supabase-js (auth client only — supabaseAuth)
 
+## Ant Design v6 Gotchas
+
+### Spin overlay blocks pointer events
+`<Spin spinning={true}>` renders an overlay that intercepts all clicks — wrapped content is unreachable while spinning. If the wrapped element needs to stay clickable (e.g. a file Dragger that should reopen the picker), render the spinner INSIDE the content instead of as a wrapper:
+```jsx
+// WRONG — overlay blocks clicks to Dragger:
+<Spin spinning={loading}><Dragger ... /></Spin>
+
+// CORRECT — spinner inside content, Dragger stays clickable:
+<Dragger ...>
+  {loading ? <Spin size="large" /> : <InboxOutlined />}
+</Dragger>
+```
+
+### File picker click spinner pattern
+The OS file picker delay (Windows Defender scan, cloud file sync) happens BEFORE `beforeUpload` fires — so the spinner must be set on the click event, not in `beforeUpload`:
+```jsx
+// Wrap Dragger in a div; set loading on click BEFORE picker opens
+<div onClick={() => setFileLoading(true)}>
+  <Dragger beforeUpload={(f) => { onFileSelect(f); return false; }} ...>
+// Clear loading via useEffect when file prop arrives from parent
+useEffect(() => { if (file) setFileLoading(false); }, [file]);
+```
+
 ## Ant Design v6 Breaking Changes
 - `Space direction="vertical"` → `Space orientation="vertical"`
 - `Divider type="vertical"` → `Divider orientation="vertical"`
