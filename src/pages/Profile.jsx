@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import {
   Typography, Card, Form, Input, Button, Space,
   Divider, Tag, Alert, Modal, Table, Popconfirm, Switch,
-  Select, Radio, Checkbox,
+  Select, Radio, Checkbox, Collapse, Spin,
 } from 'antd';
 import {
   UserOutlined, ShareAltOutlined, CrownOutlined,
   DeleteOutlined, PlusOutlined, EyeOutlined, TeamOutlined, DownloadOutlined,
+  ImportOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/useAuth';
@@ -453,6 +454,99 @@ const UpgradeSection = () => {
 };
 
 // =============================================================================
+// Import Sources Section
+// =============================================================================
+const ImportSourcesSection = () => {
+  const [preferences, setPreferences] = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [saving, setSaving]           = useState(null);
+  const message = useMessage();
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await userService.getImporterPreferences();
+        if (!cancelled) setPreferences(data.preferences || []);
+      } catch { /* silent */ }
+      finally { if (!cancelled) setLoading(false); }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleToggle = async (importerId, enabled) => {
+    setSaving(importerId);
+    try {
+      await userService.updateImporterPreferences([{ importer_id: importerId, is_enabled: enabled }]);
+      setPreferences(prev => prev.map(p => p.id === importerId ? { ...p, isEnabled: enabled } : p));
+    } catch {
+      message.error('Failed to save preference');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <Card
+      style={{ borderColor: brandColors.darkBorder, marginBottom: 24 }}
+      title={
+        <Space>
+          <ImportOutlined style={{ color: brandColors.gold }} />
+          <Text style={{ color: '#fff', fontWeight: 600 }}>Import Sources</Text>
+        </Space>
+      }
+    >
+      <Text style={{ color: brandColors.textMuted, fontSize: 13, display: 'block', marginBottom: 16 }}>
+        Choose which importers appear on your Import page. OFX / QFX and Manual Entry are always available.
+      </Text>
+      {loading ? (
+        <Spin size="small" />
+      ) : preferences.length === 0 ? (
+        <Text style={{ color: brandColors.textMuted }}>No optional importers are currently available.</Text>
+      ) : (
+        <div>
+          {preferences.map((imp, i) => (
+            <div key={imp.id}>
+              {i > 0 && <Divider style={{ borderColor: brandColors.darkBorder, margin: '12px 0' }} />}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ color: '#fff', fontWeight: 600, display: 'block' }}>{imp.name}</Text>
+                  <Text style={{ color: brandColors.textSecondary, fontSize: 13, display: 'block' }}>
+                    {imp.description}
+                  </Text>
+                  {imp.instructions && (
+                    <Collapse
+                      ghost
+                      size="small"
+                      style={{ background: 'transparent', marginTop: 4 }}
+                      items={[{
+                        key: 'instructions',
+                        label: <Text style={{ color: brandColors.gold, fontSize: 12 }}>How to generate this file</Text>,
+                        children: (
+                          <Text style={{ color: brandColors.textSecondary, fontSize: 12, whiteSpace: 'pre-line' }}>
+                            {imp.instructions}
+                          </Text>
+                        ),
+                      }]}
+                    />
+                  )}
+                </div>
+                <Switch
+                  checked={imp.isEnabled}
+                  loading={saving === imp.id}
+                  onChange={(checked) => handleToggle(imp.id, checked)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+};
+
+// =============================================================================
 // Profile Page
 // =============================================================================
 const Profile = () => {
@@ -580,6 +674,9 @@ const [deleting, setDeleting]               = useState(false);
 
       {/* Privacy settings */}
       <PrivacySection />
+
+      {/* Import Sources — not available to viewers (they cannot import) */}
+      {!isViewer && <ImportSourcesSection />}
 
       {/* Portfolio sharing — not available to viewers (they have no portfolio to share) */}
       {!isViewer && <SharingSection />}

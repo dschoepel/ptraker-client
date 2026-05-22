@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Steps, Card, Select, Button, Upload, Typography, Alert,
   Table, Tag, Space, Divider, Spin, Checkbox,
-  Tooltip, Form, Input, InputNumber, Radio
+  Tooltip, Form, Input, InputNumber, Radio, Collapse
 } from 'antd';
 import {
   UploadOutlined, CheckCircleOutlined, CloseCircleOutlined,
@@ -114,13 +114,36 @@ const StepSelectInstitution = ({ importers, selectedImporter, onSelect, onNext }
       ))}
     </Select>
 
-    {selectedImporter && (
-      <Alert
-        type="info"
-        style={{ marginBottom: 24 }}
-        description={importers.find(i => i.id === selectedImporter)?.description}
-      />
-    )}
+    {selectedImporter && (() => {
+      const imp = importers.find(i => i.id === selectedImporter);
+      return (
+        <Alert
+          type="info"
+          style={{ marginBottom: 24 }}
+          description={
+            <div>
+              <div>{imp?.description}</div>
+              {imp?.instructions && (
+                <Collapse
+                  ghost
+                  size="small"
+                  style={{ background: 'transparent', marginTop: 8 }}
+                  items={[{
+                    key: 'instructions',
+                    label: <Text style={{ fontSize: 12 }}>How to generate this file</Text>,
+                    children: (
+                      <Text style={{ fontSize: 12, whiteSpace: 'pre-line' }}>
+                        {imp.instructions}
+                      </Text>
+                    ),
+                  }]}
+                />
+              )}
+            </div>
+          }
+        />
+      );
+    })()}
 
     <Button
       type="primary"

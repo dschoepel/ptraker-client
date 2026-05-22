@@ -46,6 +46,23 @@ export const adminService = {
   },
 };
 
+export const importerService = {
+  getAll: async () => {
+    const response = await api.get('/admin/importers');
+    return response.data;
+  },
+
+  register: async (data) => {
+    const response = await api.post('/admin/importers', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.patch(`/admin/importers/${id}`, data);
+    return response.data;
+  },
+};
+
 export const sharesService = {
   getShares: async () => {
     const response = await api.get('/shares');
@@ -81,6 +98,16 @@ export const userService = {
 
   getUpgradeRequest: async () => {
     const response = await api.get('/user/upgrade-request');
+    return response.data;
+  },
+
+  getImporterPreferences: async () => {
+    const response = await api.get('/user/importer-preferences');
+    return response.data;
+  },
+
+  updateImporterPreferences: async (preferences) => {
+    const response = await api.patch('/user/importer-preferences', { preferences });
     return response.data;
   },
 };
