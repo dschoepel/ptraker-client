@@ -1,3 +1,26 @@
+# Release Notes — v1.4.2
+
+**Date:** 2026-05-22
+**Type:** Patch — import spinner overlay fix
+
+## Summary
+
+Fixes the file upload spinner blocking re-clicks after a cancelled file picker.
+The spinner is now rendered inside the Dragger content area rather than as an
+Ant Design Spin overlay. An overlay intercepts pointer events, so clicking the
+Dragger while spinning did nothing — users had to click Back to recover. With the
+spinner inside the Dragger, clicks always reach the Dragger and re-open the file
+picker normally.
+
+## Deployment
+
+```bash
+git tag v1.4.2
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.4.1
 
 **Date:** 2026-05-22

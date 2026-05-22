@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.2] — 2026-05-22
+
+### Fixed
+- Import file upload: spinner now renders inside the Dragger (not as a blocking overlay) so clicking the Dragger while the spinner is showing still opens the file picker — allows retrying after a cancelled picker without having to click Back
+
+---
+
 ## [1.4.1] — 2026-05-22
 
 ### Changed

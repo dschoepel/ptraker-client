@@ -169,12 +169,22 @@ const StepUploadFile = ({
 }) => {
   const [fileLoading, setFileLoading] = useState(false);
 
+  // Clear spinner when file prop arrives (drag path or after picker delay)
+  useEffect(() => {
+    if (file) setFileLoading(false);
+  }, [file]);
+
+  // Click on the Dragger area: set spinner immediately, BEFORE the OS file
+  // picker opens. The picker blocks user interaction with the page for however
+  // long Windows takes to make the file available (can be 8-9s for cloud files
+  // or Defender-scanned files). beforeUpload isn't called until after that delay,
+  // so we must start the spinner here, not in beforeUpload.
+  const handlePickerClick = () => {
+    if (!fileLoading) setFileLoading(true);
+  };
+
   const handleBeforeUpload = (f) => {
-    setFileLoading(true);
-    setTimeout(() => {
-      onFileSelect(f);
-      setFileLoading(false);
-    }, 0);
+    onFileSelect(f);
     return false;
   };
 
@@ -246,21 +256,27 @@ const StepUploadFile = ({
           Export File
         </Text>
         {!file && (
-          <Spin spinning={fileLoading} tip="Loading file...">
+          <div onClick={handlePickerClick}>
             <Dragger
               accept=".csv,.qfx,.ofx"
               maxCount={1}
+              fileList={[]}
               showUploadList={false}
               beforeUpload={handleBeforeUpload}
               style={{ background: brandColors.darkHover, borderColor: brandColors.darkBorder }}
             >
               <p style={{ margin: '16px 0 8px' }}>
-                <InboxOutlined style={{ fontSize: 36, color: brandColors.gold }} />
+                {fileLoading
+                  ? <Spin size="large" />
+                  : <InboxOutlined style={{ fontSize: 36, color: brandColors.gold }} />
+                }
               </p>
-              <p style={{ color: '#fff', fontSize: 14, margin: '0 0 4px' }}>Click or drag file here</p>
+              <p style={{ color: fileLoading ? brandColors.gold : '#fff', fontSize: 14, margin: '0 0 4px' }}>
+                {fileLoading ? 'Preparing file...' : 'Click or drag file here'}
+              </p>
               <p style={{ color: brandColors.textMuted, fontSize: 12, margin: 0 }}>CSV, QFX, OFX</p>
             </Dragger>
-          </Spin>
+          </div>
         )}
         {file && (
           <div style={{
