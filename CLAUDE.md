@@ -71,7 +71,7 @@ useEffect(() => { fetchData(); }, [refreshKey]);
 - `api.js` — Axios instance, auto-injects Bearer token, handles 401 refresh
 - `auth.service.js` — supabaseAuth client; forgotPassword calls Express API
 - `dashboard.service.js` — dashboardService, positionService, accountService, importService, priceService, watchlistService
-- `admin.service.js` — adminService, sharesService, userService
+- `admin.service.js` — adminService, importerService, sharesService, userService (includes getImporterPreferences, updateImporterPreferences)
 
 ## Pages & Access
 | Page | Path | Roles |

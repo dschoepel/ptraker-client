@@ -1,3 +1,35 @@
+# Release Notes — v1.4.0
+
+**Date:** 2026-05-22
+**Type:** Minor — pluggable importer registry (admin + user UI)
+
+## Summary
+
+Client-side changes accompanying the API v1.3.0 importer registry feature.
+
+Admin page gains a new **Importers** section: a table listing all registered
+importers with Edit and Register Importer actions. Admins can update display names,
+descriptions, and multi-line usage instructions without touching code.
+
+Profile page gains a new **Import Sources** section: users toggle which optional
+importers (LPL Financial CSV, CFCU CSV, future additions) appear on their Import
+page. Default importers (OFX/QFX, Manual Entry) show a locked always-on indicator.
+Each importer row has a collapsible "How to generate this file" panel showing the
+step-by-step instructions managed by admins.
+
+Import page importer info alert now includes the same collapsible instructions
+panel. Filtering of the importer dropdown now happens server-side based on user
+preferences — the client no longer needs to filter locally.
+
+## Deployment
+
+```bash
+git tag v1.4.0
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.3.0
 
 **Date:** 2026-05-21

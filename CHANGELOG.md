@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.0] — 2026-05-22
+
+### Added
+- Admin page: new **Importers** section — table of all registered importers showing name, file types, default status, active status, and display order; Edit button opens modal to update name, description, instructions, is_default, is_active, and display order; Register Importer button for adding newly-deployed code modules
+- Profile page: new **Import Sources** section — lists all active non-default importers with per-user enable/disable toggle; default importers shown as always-on; each importer has a collapsible "How to generate this file" instructions panel
+- Import page: importer info alert now includes a collapsible "How to generate this file" panel showing DB-managed usage instructions
+- `admin.service.js`: `importerService` with `getAll`, `register`, `update` methods
+- `userService`: `getImporterPreferences` and `updateImporterPreferences` methods
+
+### Changed
+- Import page importer dropdown now filtered server-side by user preferences — users only see importers they have enabled (plus always-visible defaults)
+
+---
+
 ## [1.3.0] — 2026-05-21
 
 ### Added
