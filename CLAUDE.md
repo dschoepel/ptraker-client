@@ -136,4 +136,4 @@ VITE_SUPABASE_ANON_KEY=<key>
 ```
 
 ## Pending / TODO
-- [ ] Production build / deployment to ptraker.com
+- [x] Production build / deployment to ptraker.com
