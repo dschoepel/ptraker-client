@@ -1,3 +1,34 @@
+# Release Notes — v1.3.0
+
+**Date:** 2026-05-21
+**Type:** Minor — PWA support, private stock entry, bug fixes
+
+## Summary
+
+Adds Progressive Web App support so the app can be installed as a home screen
+icon on iOS and Android. Includes the full pTracker branded icon set (all sizes
++ maskable variants) and App Store screenshots for the rich install dialog.
+
+Adds private/unlisted stock mode to manual entry — lets users record physical
+stock certificates or OTC stocks by entering ticker, company name, shares, price
+per share, and cost basis per share directly, bypassing Yahoo Finance entirely.
+
+Fixes a critical login bug where the 401 Axios interceptor triggered a full page
+reload on failed login attempts, wiping the error message and form fields before
+the user could read them. Error messaging is also improved with friendlier copy.
+
+Fixes the Profile page showing Portfolio Sharing to viewer-role users (who have
+no portfolio to share), and fixes pie chart label clipping on the Analytics page.
+
+## Deployment
+
+```bash
+git tag v1.3.0
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.2.2
 
 **Date:** 2026-05-21
