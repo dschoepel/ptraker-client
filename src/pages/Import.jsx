@@ -254,6 +254,7 @@ const StepUploadFile = ({
 const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
   const [form] = Form.useForm();
   const [mode, setMode] = useState('cash');
+  const [isPrivate, setIsPrivate] = useState(false);
   const [tickerOptions, setTickerOptions] = useState([]);
   const [searching, setSearching] = useState(false);
 
@@ -263,11 +264,19 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
 
   const handleModeChange = (e) => {
     setMode(e.target.value);
+    setIsPrivate(false);
     form.resetFields();
     setTickerOptions([]);
     if (e.target.value === 'position') {
       form.setFieldsValue({ asOfDate: new Date().toISOString().split('T')[0] });
     }
+  };
+
+  const handlePrivateChange = (e) => {
+    setIsPrivate(e.target.checked);
+    form.resetFields(['ticker', 'assetName', 'shares', 'pricePerShare', 'marketValue']);
+    setTickerOptions([]);
+    form.setFieldsValue({ asOfDate: new Date().toISOString().split('T')[0] });
   };
 
   const handleTickerSearch = async (q) => {
@@ -289,7 +298,7 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      await onSave({ ...values, mode });
+      await onSave({ ...values, mode, isPrivate });
     } catch {
       // validation shown inline
     }
@@ -311,7 +320,9 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
       <Text style={{ color: brandColors.textSecondary, display: 'block', marginBottom: 20 }}>
         {mode === 'cash'
           ? 'Enter the current balance for a checking, savings, or cash account. Use this when there are no recent transactions to export.'
-          : 'Enter a fund or stock position by market value. Shares will be back-calculated from the current price.'}
+          : isPrivate
+            ? 'Enter a private or unlisted stock (e.g. a physical certificate). Enter shares and price directly — no exchange lookup is performed.'
+            : 'Enter a fund or stock position by market value. Shares will be back-calculated from the current price.'}
       </Text>
 
       <Form form={form} layout="vertical" requiredMark={false}>
@@ -365,41 +376,102 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
           </>
         ) : (
           <>
+            <Form.Item style={{ marginBottom: 16 }}>
+              <Checkbox checked={isPrivate} onChange={handlePrivateChange}
+                style={{ color: brandColors.textSecondary }}>
+                Private / unlisted stock (not on exchanges)
+              </Checkbox>
+            </Form.Item>
+
             <Form.Item
               name="ticker"
               label="Ticker / Symbol"
               rules={[{ required: true, message: 'Ticker is required' }]}
             >
-              <Select
-                showSearch
-                size="large"
-                placeholder="Search ticker (e.g. VFIAX, AAPL)"
-                filterOption={false}
-                onSearch={handleTickerSearch}
-                loading={searching}
-                notFoundContent={searching ? <Spin size="small" /> : null}
-                options={tickerOptions}
-              />
+              {isPrivate ? (
+                <Input
+                  size="large"
+                  placeholder="e.g. BNDLBNC"
+                  style={{ textTransform: 'uppercase' }}
+                />
+              ) : (
+                <Select
+                  showSearch
+                  size="large"
+                  placeholder="Search ticker (e.g. VFIAX, AAPL)"
+                  filterOption={false}
+                  onSearch={handleTickerSearch}
+                  loading={searching}
+                  notFoundContent={searching ? <Spin size="small" /> : null}
+                  options={tickerOptions}
+                />
+              )}
             </Form.Item>
-            <Form.Item
-              name="marketValue"
-              label="Market Value"
-              rules={[
-                { required: true, message: 'Market value is required' },
-                { type: 'number', min: 0.01, message: 'Must be greater than 0' },
-              ]}
-            >
-              <InputNumber
-                prefix="$"
-                precision={2}
-                size="large"
-                style={{ width: '100%' }}
-                placeholder="0.00"
-                formatter={val => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={val => val.replace(/\$\s?|(,*)/g, '')}
-              />
-            </Form.Item>
-            <Form.Item name="costBasis" label="Cost Basis (optional)">
+
+            {isPrivate && (
+              <Form.Item name="assetName" label="Company Name (optional)">
+                <Input size="large" placeholder="e.g. Bonduel Bancorp, Inc." />
+              </Form.Item>
+            )}
+
+            {isPrivate ? (
+              <>
+                <Form.Item
+                  name="shares"
+                  label="Number of Shares"
+                  rules={[
+                    { required: true, message: 'Shares is required' },
+                    { type: 'number', min: 0.0001, message: 'Must be greater than 0' },
+                  ]}
+                >
+                  <InputNumber
+                    size="large"
+                    style={{ width: '100%' }}
+                    placeholder="0"
+                    precision={4}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="pricePerShare"
+                  label="Current Price per Share"
+                  rules={[
+                    { required: true, message: 'Price per share is required' },
+                    { type: 'number', min: 0.01, message: 'Must be greater than 0' },
+                  ]}
+                >
+                  <InputNumber
+                    prefix="$"
+                    precision={2}
+                    size="large"
+                    style={{ width: '100%' }}
+                    placeholder="0.00"
+                    formatter={val => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={val => val.replace(/\$\s?|(,*)/g, '')}
+                  />
+                </Form.Item>
+              </>
+            ) : (
+              <Form.Item
+                name="marketValue"
+                label="Market Value"
+                rules={[
+                  { required: true, message: 'Market value is required' },
+                  { type: 'number', min: 0.01, message: 'Must be greater than 0' },
+                ]}
+              >
+                <InputNumber
+                  prefix="$"
+                  precision={2}
+                  size="large"
+                  style={{ width: '100%' }}
+                  placeholder="0.00"
+                  formatter={val => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={val => val.replace(/\$\s?|(,*)/g, '')}
+                />
+              </Form.Item>
+            )}
+
+            <Form.Item name="costBasis" label={isPrivate ? 'Cost Basis per Share (optional)' : 'Cost Basis (optional)'}>
               <InputNumber
                 prefix="$"
                 precision={2}
@@ -755,8 +827,8 @@ const Import = () => {
   const handleManualSave = async (values) => {
     setImporting(true);
     try {
-      const { mode, accountId, balance, ticker, marketValue, costBasis, asOfDate } = values;
-      await importService.manualEntry(accountId, mode, { balance, ticker, marketValue, costBasis, asOfDate });
+      const { mode, accountId, balance, ticker, marketValue, costBasis, asOfDate, isPrivate, shares, pricePerShare, assetName } = values;
+      await importService.manualEntry(accountId, mode, { balance, ticker, marketValue, costBasis, asOfDate, isPrivate, shares, pricePerShare, assetName });
       setResult({
         status: 'success',
         rowsImported: 1,

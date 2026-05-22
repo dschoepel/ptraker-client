@@ -34,6 +34,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
+      // A 401 from the login endpoint means wrong credentials, not session expiry.
+      // Let it propagate normally so the Login page can show the error message.
+      if (error.config?.url?.includes('/auth/login')) {
+        return Promise.reject(error);
+      }
+
       // Token expired or invalid — try to refresh
       const refreshToken = localStorage.getItem('ptraker_refresh_token');
 

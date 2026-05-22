@@ -581,8 +581,8 @@ const [deleting, setDeleting]               = useState(false);
       {/* Privacy settings */}
       <PrivacySection />
 
-      {/* Portfolio sharing */}
-      <SharingSection />
+      {/* Portfolio sharing — not available to viewers (they have no portfolio to share) */}
+      {!isViewer && <SharingSection />}
 
       {/* Danger Zone */}
       {/* Danger Zone */}

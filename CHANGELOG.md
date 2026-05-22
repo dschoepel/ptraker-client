@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.3.0] — 2026-05-21
+
+### Added
+- PWA support — installable as home screen app on iOS and Android via `vite-plugin-pwa`
+- Full pTracker icon set (all sizes + maskable variants) and App Store screenshots
+- Private / unlisted stock support in manual entry — bypass Yahoo Finance with direct ticker, company name, shares, price per share, and cost basis per share
+- Demo user seed script (`deploy/seeds/demo-user.sql`) with ~$1M sample portfolio across Schwab, Merrill Lynch, US Bank, and Other accounts
+
+### Fixed
+- Login page: 401 interceptor was triggering `window.location.href = '/login'` on failed login attempts, causing a full page reload that wiped the error message and form fields
+- Login page: raw "Invalid login credentials" replaced with friendly message; alerts now show icon for better visibility
+- Profile page: "Portfolio Sharing" section no longer shown for viewer-role users
+- Analytics: pie chart labels clipped — `ResponsiveContainer` height raised 220→260px
+
+---
+
 ## [1.2.2] — 2026-05-21
 
 ### Fixed

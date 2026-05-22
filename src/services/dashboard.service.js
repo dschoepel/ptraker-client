@@ -72,11 +72,18 @@ export const importService = {
     const payload = { accountId, mode };
     if (mode === 'cash') {
       payload.shares = fields.balance;
-    } else {
+    } else if (fields.isPrivate) {
       payload.ticker     = fields.ticker;
-      payload.marketValue = fields.marketValue;
-      payload.costBasis  = fields.costBasis;
+      payload.assetName  = fields.assetName;
+      payload.shares     = fields.shares;
+      payload.price      = fields.pricePerShare;
+      payload.costBasis  = (fields.costBasis || 0) * fields.shares;
       payload.asOfDate   = fields.asOfDate;
+    } else {
+      payload.ticker      = fields.ticker;
+      payload.marketValue = fields.marketValue;
+      payload.costBasis   = fields.costBasis;
+      payload.asOfDate    = fields.asOfDate;
     }
     const response = await api.post('/import/manual', payload);
     return response.data;

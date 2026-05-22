@@ -67,7 +67,14 @@ const Login = () => {
       }
 
     } catch (err) {
-      setError(err.message || err.response?.data?.message || 'Something went wrong');
+      const raw = err.message || err.response?.data?.message || '';
+      if (/invalid login/i.test(raw) || /invalid credentials/i.test(raw)) {
+        setError('Incorrect email or password. Please try again.');
+      } else if (/email not confirmed/i.test(raw)) {
+        setError('Email not confirmed. Check your inbox for a confirmation link.');
+      } else {
+        setError(raw || 'Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -137,6 +144,7 @@ const Login = () => {
           {successMsg && (
             <Alert
               type="success"
+              showIcon
               message={successMsg}
               style={{ marginBottom: 20 }}
               closable
@@ -147,6 +155,7 @@ const Login = () => {
           {error && (
             <Alert
               type="error"
+              showIcon
               message={error}
               style={{ marginBottom: 20 }}
               closable

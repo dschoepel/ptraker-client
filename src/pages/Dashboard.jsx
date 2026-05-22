@@ -451,7 +451,7 @@ const AnalyticsView = ({ accounts, positions }) => {
                 <Text style={{ color: brandColors.textMuted, fontSize: 11, display: 'block', marginBottom: 8 }}>
                   VALUE ALLOCATION
                 </Text>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie data={institutionData} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
                       dataKey="value" labelLine={false} label={renderPieLabel}>
@@ -524,7 +524,7 @@ const AnalyticsView = ({ accounts, positions }) => {
             </Text>
             <Row gutter={[16, 0]} align="middle">
               <Col xs={24} sm={12}>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie data={accountTypeData} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
                       dataKey="value" labelLine={false} label={renderPieLabel}>
