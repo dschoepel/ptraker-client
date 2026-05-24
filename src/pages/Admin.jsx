@@ -108,8 +108,6 @@ const NotificationSettings = () => {
         const data = await adminService.getNotificationSettings();
         if (!cancelled) {
           setSettings(data.settings);
-          ntfyForm.setFieldsValue(data.settings.ntfy || {});
-          emailForm.setFieldsValue(data.settings.email || {});
         }
       } catch {
         // silent
@@ -117,7 +115,7 @@ const NotificationSettings = () => {
     };
     load();
     return () => { cancelled = true; };
-  }, [ntfyForm, emailForm]);
+  }, []);
 
   const handleSaveNtfy = async () => {
     setSaving(true);
@@ -168,6 +166,7 @@ const NotificationSettings = () => {
       items={[
         {
           key: 'ntfy',
+          forceRender: true,
           label: (
             <Space>
               <BellOutlined style={{ color: brandColors.gold }} />
@@ -178,7 +177,7 @@ const NotificationSettings = () => {
             </Space>
           ),
           children: (
-            <Form form={ntfyForm} layout="vertical" requiredMark={false}>
+            <Form form={ntfyForm} layout="vertical" requiredMark={false} initialValues={settings?.ntfy || {}}>
               <Form.Item name="enabled" valuePropName="checked">
                 <Switch checkedChildren="Enabled" unCheckedChildren="Disabled" />
               </Form.Item>
@@ -208,6 +207,7 @@ const NotificationSettings = () => {
         },
         {
           key: 'email',
+          forceRender: true,
           label: (
             <Space>
               <MailOutlined style={{ color: brandColors.gold }} />
@@ -218,7 +218,7 @@ const NotificationSettings = () => {
             </Space>
           ),
           children: (
-            <Form form={emailForm} layout="vertical" requiredMark={false}>
+            <Form form={emailForm} layout="vertical" requiredMark={false} initialValues={settings?.email || {}}>
               <Form.Item name="enabled" valuePropName="checked">
                 <Switch checkedChildren="Enabled" unCheckedChildren="Disabled" />
               </Form.Item>
@@ -339,7 +339,7 @@ const ImporterManagement = () => {
       title: 'Name',
       key: 'name',
       render: (_, r) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text style={{ color: '#fff', fontWeight: 600 }}>{r.name}</Text>
           <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>{r.id}</Text>
           {!r.hasModule && <Tag color="error" style={{ marginTop: 2, fontSize: 11 }}>No code module</Tag>}
@@ -586,7 +586,7 @@ const Admin = () => {
       title: 'User',
       key: 'user',
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text style={{ color: '#fff', fontWeight: 600 }}>
             {record.display_name || 'No name set'}
           </Text>
@@ -658,7 +658,7 @@ const Admin = () => {
       title: 'User',
       key: 'user',
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text style={{ color: '#fff', fontWeight: 600 }}>{record.display_name}</Text>
           <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>{record.email}</Text>
         </Space>

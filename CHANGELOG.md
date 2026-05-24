@@ -5,6 +5,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.5.0] — 2026-05-24
+
+### Added
+- Profile page: **Import History Retention** section (admin/user roles only) — select how many imports to keep (Unlimited, 10, 25, 50, 100); "Save & Apply" patches the profile and immediately purges old records, showing a toast with the deleted count
+- `userService.purgeImportHistory()` in `admin.service.js`
+
+### Changed
+- Import page history: replaced flat paginated table with grouped collapsible rows by account; each group header shows account name, institution tag (from the account record, not the import method), import count, and last import date
+- Import history detail rows now show: status, row count, positions-as-of date, import method (plain text via "via …"), and imported-at timestamp — no redundant tags or raw short codes
+- Import method lookup uses prefix matching (`lpl` → `lpl_csv`) so importer display names (e.g. "LPL Financial CSV") resolve correctly from the importer registry
+- `getHistory` API response now includes `account.institution` for accurate institution labeling
+
+### Fixed
+- Admin Notification Settings: removed `setFieldsValue` call that fired before Form elements were connected; forms now use `initialValues` (populated after the `<Spin>` guard), eliminating the "useForm not connected" console warning
+- Fixed four Ant Design v6 console warnings across Admin, Import, Watchlist pages: `Space direction` → `orientation`, `Select value: null` → string sentinel, notification `message` → `title`, `<div>` inside `<p>` hydration error
+
+---
+
 ## [1.4.3] — 2026-05-24
 
 ### Fixed

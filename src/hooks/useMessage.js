@@ -4,7 +4,7 @@ import { App as AntdApp } from 'antd';
 // Usage: const message = useMessage();
 const useMessage = () => {
   const { notification } = AntdApp.useApp();
-  const wrap = (type) => (content) => notification[type]({ message: content, duration: 8, placement: 'topRight' });
+  const wrap = (type) => (content) => notification[type]({ title: content, duration: 8, placement: 'topRight' });
   return {
     success: wrap('success'),
     error:   wrap('error'),

@@ -7,7 +7,7 @@ import {
 import {
   UserOutlined, ShareAltOutlined, CrownOutlined,
   DeleteOutlined, PlusOutlined, EyeOutlined, TeamOutlined, DownloadOutlined,
-  ImportOutlined,
+  ImportOutlined, HistoryOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/useAuth';
@@ -334,7 +334,7 @@ const PrivacySection = () => {
         </Space>
       }
     >
-      <Space direction="vertical" size={4} style={{ width: '100%' }}>
+      <Space orientation="vertical" size={4} style={{ width: '100%' }}>
         <Space>
           <Switch
             checked={discoverable}
@@ -395,7 +395,7 @@ const UpgradeSection = () => {
 
   return (
     <Card style={{ borderColor: brandColors.darkBorder, marginBottom: 24 }}>
-      <Space direction="vertical" size={12} style={{ width: '100%' }}>
+      <Space orientation="vertical" size={12} style={{ width: '100%' }}>
         <Text style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>
           Request Full Access
         </Text>
@@ -547,6 +547,90 @@ const ImportSourcesSection = () => {
 };
 
 // =============================================================================
+// Import History Retention Section
+// =============================================================================
+const RETENTION_OPTIONS = [
+  { value: 'unlimited', label: 'Unlimited — keep all records' },
+  { value: 10,          label: 'Last 10 imports per account' },
+  { value: 25,          label: 'Last 25 imports per account' },
+  { value: 50,          label: 'Last 50 imports per account' },
+  { value: 100,         label: 'Last 100 imports per account' },
+];
+
+const ImportHistoryRetentionSection = () => {
+  const [limit, setLimit]   = useState(undefined); // undefined = not yet loaded
+  const [saving, setSaving] = useState(false);
+  const message = useMessage();
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const data = await authService.getProfile();
+        if (!cancelled) setLimit(data.profile?.importHistoryLimit ?? 'unlimited');
+      } catch {
+        // silent
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const apiValue = limit === 'unlimited' ? null : limit;
+      await api.patch('/auth/profile', { importHistoryLimit: apiValue });
+      const purgeResult = await userService.purgeImportHistory();
+      const deleted = purgeResult?.deleted ?? 0;
+      message.success(
+        deleted > 0
+          ? `Limit saved. ${deleted} old record${deleted === 1 ? '' : 's'} removed.`
+          : 'Limit saved.'
+      );
+    } catch {
+      message.error('Failed to save retention setting');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card
+      style={{ borderColor: brandColors.darkBorder, marginBottom: 24 }}
+      title={
+        <Space>
+          <HistoryOutlined style={{ color: brandColors.gold }} />
+          <Text style={{ color: '#fff', fontWeight: 600 }}>Import History Retention</Text>
+        </Space>
+      }
+    >
+      <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+        <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>
+          Choose how many imports to keep <strong style={{ color: '#fff' }}>per account</strong>. The most recent import for each account is always kept to preserve the Last Import date on your dashboard.
+        </Text>
+        <Space wrap>
+          <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>Keep last:</Text>
+          <Select
+            value={limit === undefined ? 'unlimited' : limit}
+            onChange={setLimit}
+            style={{ width: 260 }}
+            options={RETENTION_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+            loading={limit === undefined}
+          />
+          <Button type="primary" onClick={handleSave} loading={saving}>
+            Save &amp; Apply
+          </Button>
+        </Space>
+        <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+          Older records beyond the limit are removed automatically after each import. The total number of records kept may be slightly higher than the limit when you have multiple accounts.
+        </Text>
+      </Space>
+    </Card>
+  );
+};
+
+// =============================================================================
 // Profile Page
 // =============================================================================
 const Profile = () => {
@@ -637,7 +721,7 @@ const [deleting, setDeleting]               = useState(false);
           </Space>
         }
       >
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
           <Space>
             <Text style={{ color: brandColors.textSecondary }}>Email:</Text>
             <Text style={{ color: '#fff' }}>{user?.email}</Text>
@@ -678,16 +762,18 @@ const [deleting, setDeleting]               = useState(false);
       {/* Import Sources — not available to viewers (they cannot import) */}
       {!isViewer && <ImportSourcesSection />}
 
+      {/* Import History Retention — not available to viewers */}
+      {!isViewer && <ImportHistoryRetentionSection />}
+
       {/* Portfolio sharing — not available to viewers (they have no portfolio to share) */}
       {!isViewer && <SharingSection />}
 
-      {/* Danger Zone */}
       {/* Danger Zone */}
 <Card
   style={{ borderColor: brandColors.loss, marginBottom: 24 }}
   title={<Text style={{ color: brandColors.loss, fontWeight: 600 }}>Danger Zone</Text>}
 >
-  <Space direction="vertical" size={8}>
+  <Space orientation="vertical" size={8}>
     <Text style={{ color: brandColors.textSecondary }}>
       Permanently delete your account and all your portfolio data. This cannot be undone.
     </Text>
@@ -709,7 +795,7 @@ const [deleting, setDeleting]               = useState(false);
   onCancel={() => { setDeleteModalOpen(false); setDeleteConfirmed(false); }}
   footer={null}
 >
-  <Space direction="vertical" size={16} style={{ width: '100%', marginTop: 8 }}>
+  <Space orientation="vertical" size={16} style={{ width: '100%', marginTop: 8 }}>
     <Alert
       type="warning"
       message="This permanently deletes your account and all data. This cannot be undone."

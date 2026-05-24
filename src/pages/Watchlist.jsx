@@ -304,7 +304,7 @@ const Watchlist = () => {
       key: 'ticker',
       width: 160,
       render: (val, row) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{val}</Text>
           {row.asset_name && (
             <Text style={{
@@ -340,7 +340,7 @@ const Watchlist = () => {
       align: 'right',
       render: (val, row) => (
         val ? (
-          <Space direction="vertical" size={0} style={{ textAlign: 'right' }}>
+          <Space orientation="vertical" size={0} style={{ textAlign: 'right' }}>
             <Text style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(val)}</Text>
             <Space size={4}>
               <GainLossIndicator value={row.change_percent} />
@@ -360,7 +360,7 @@ const Watchlist = () => {
       key: 'added_at',
       width: 130,
       render: (val, row) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>
             {new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </Text>

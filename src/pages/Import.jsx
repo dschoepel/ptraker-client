@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Steps, Card, Select, Button, Upload, Typography, Alert,
-  Table, Tag, Space, Divider, Spin, Checkbox,
+  Tag, Space, Divider, Spin, Checkbox,
   Tooltip, Form, Input, InputNumber, Radio, Collapse
 } from 'antd';
 import {
@@ -21,68 +21,89 @@ const { Option } = Select;
 const { Dragger } = Upload;
 
 // =============================================================================
-// Import History table columns
+// Import History — grouped by account
 // =============================================================================
-const historyColumns = [
-  {
-    title: 'File',
-    dataIndex: 'filename',
-    key: 'filename',
-    ellipsis: true,
-    render: (val) => <Text style={{ color: '#fff', fontSize: 13 }}>{val}</Text>,
-  },
-  {
-    title: 'Institution',
-    dataIndex: 'institution',
-    key: 'institution',
-    width: 140,
-    render: (val) => <Tag color="default">{institutionName(val)}</Tag>,
-  },
-  {
-    title: 'Status',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    render: (val) => {
-      const config = {
-        success: { color: 'success', icon: <CheckCircleOutlined /> },
-        partial: { color: 'warning', icon: <WarningOutlined /> },
-        failed:  { color: 'error',   icon: <CloseCircleOutlined /> },
-      };
-      const { color, icon } = config[val] || config.failed;
-      return <Tag color={color} icon={icon}>{val}</Tag>;
-    },
-  },
-  {
-    title: 'Imported',
-    dataIndex: 'rows_imported',
-    key: 'rows_imported',
-    width: 90,
-    align: 'right',
-    render: (val) => <Text style={{ color: brandColors.textSecondary }}>{val} rows</Text>,
-  },
-  {
-    title: 'As Of',
-    dataIndex: 'as_of_date',
-    key: 'as_of_date',
-    width: 110,
-    render: (val) => <Text style={{ color: brandColors.textSecondary }}>{formatDate(val)}</Text>,
-  },
-  {
-    title: 'Date',
-    dataIndex: 'imported_at',
-    key: 'imported_at',
-    width: 160,
-    render: (val) => (
-      <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
-        {new Date(val).toLocaleString('en-US', {
-          month: 'short', day: 'numeric',
-          hour: 'numeric', minute: '2-digit'
-        })}
-      </Text>
-    ),
-  },
-];
+const STATUS_CONFIG = {
+  success: { color: 'success', icon: <CheckCircleOutlined /> },
+  partial: { color: 'warning', icon: <WarningOutlined /> },
+  failed:  { color: 'error',   icon: <CloseCircleOutlined /> },
+};
+
+const HistoryGrouped = ({ history, importers }) => {
+  const importerName = (id) => {
+    const imp = importers.find(i => i.id === id || i.id.startsWith(id + '_'));
+    return imp?.name || institutionName(id);
+  };
+  const groups = useMemo(() => {
+    const map = new Map();
+    history.forEach(r => {
+      const label = r.account?.name
+        || (r.filename.includes(' — ') ? r.filename.slice(r.filename.indexOf(' — ') + 3) : null)
+        || institutionName(r.institution);
+      const key = `${r.institution}__${label}`;
+      if (!map.has(key)) map.set(key, {
+        key, label,
+        accountInstitution: r.account?.institution || null,
+        records: [],
+      });
+      map.get(key).records.push(r);
+    });
+    return [...map.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [history]);
+
+  if (groups.length === 0) {
+    return <Text style={{ color: brandColors.textMuted }}>No imports yet</Text>;
+  }
+
+  const items = groups.map(g => {
+    const sorted = [...g.records].sort((a, b) => new Date(b.imported_at) - new Date(a.imported_at));
+    const lastDate = new Date(sorted[0].imported_at).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    });
+    return {
+      key: g.key,
+      label: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
+          <Text style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{g.label}</Text>
+          {g.accountInstitution && (
+            <Tag color="default" style={{ margin: 0, flexShrink: 0 }}>{institutionName(g.accountInstitution)}</Tag>
+          )}
+          <Text style={{ color: brandColors.textMuted, fontSize: 11, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+            {sorted.length} import{sorted.length !== 1 ? 's' : ''} · last {lastDate}
+          </Text>
+        </div>
+      ),
+      children: (
+        <div>
+          {sorted.map(r => {
+            const sc = STATUS_CONFIG[r.status] || STATUS_CONFIG.failed;
+            return (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 0', flexWrap: 'wrap', borderTop: `1px solid ${brandColors.darkBorder}` }}>
+                <Tag color={sc.color} icon={sc.icon} style={{ margin: 0 }}>{r.status}</Tag>
+                <Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>{r.rows_imported} rows</Text>
+                <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>positions as of {formatDate(r.as_of_date)}</Text>
+                <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>via {importerName(r.institution)}</Text>
+                <Text style={{ color: brandColors.textMuted, fontSize: 11, marginLeft: 'auto' }}>
+                  imported {new Date(r.imported_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </Text>
+              </div>
+            );
+          })}
+        </div>
+      ),
+    };
+  });
+
+  return (
+    <Collapse
+      items={items}
+      defaultActiveKey={[]}
+      ghost
+      style={{ background: 'transparent' }}
+    />
+  );
+};
+
 
 // =============================================================================
 // Step 1 — Select Institution
@@ -265,12 +286,12 @@ const StepUploadFile = ({
               beforeUpload={handleBeforeUpload}
               style={{ background: brandColors.darkHover, borderColor: brandColors.darkBorder }}
             >
-              <p style={{ margin: '16px 0 8px' }}>
+              <div style={{ margin: '16px 0 8px' }}>
                 {fileLoading
                   ? <Spin size="large" />
                   : <InboxOutlined style={{ fontSize: 36, color: brandColors.gold }} />
                 }
-              </p>
+              </div>
               <p style={{ color: fileLoading ? brandColors.gold : '#fff', fontSize: 14, margin: '0 0 4px' }}>
                 {fileLoading ? 'Preparing file...' : 'Click or drag file here'}
               </p>
@@ -1035,18 +1056,7 @@ const Import = () => {
         Import History
       </Title>
 
-      {historyLoading ? <Spin /> : (
-        <Table
-          dataSource={history}
-          columns={historyColumns}
-          rowKey="id"
-          size="small"
-          pagination={{ pageSize: 10, size: 'small' }}
-          scroll={{ x: 700 }}
-          style={{ borderRadius: 8, overflow: 'hidden' }}
-          locale={{ emptyText: 'No imports yet' }}
-        />
-      )}
+      {historyLoading ? <Spin /> : <HistoryGrouped history={history} importers={importers} />}
     </div>
   );
 };

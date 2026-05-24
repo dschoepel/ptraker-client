@@ -1,3 +1,32 @@
+# Release Notes — v1.5.0
+
+**Date:** 2026-05-24
+**Type:** Minor — import history retention UI + grouped history display
+
+## Summary
+
+Adds an Import History Retention setting on the Profile page (admin/user roles).
+Users pick a limit (10 / 25 / 50 / 100 / Unlimited) and click "Save & Apply" to
+enforce it immediately; the API purges excess records while always keeping the
+most-recent per account. Auto-purge also fires after each import.
+
+The Import page history section is redesigned: grouped collapsible rows per account,
+with the account's financial institution in the header, import count, and last import
+date visible without expanding. Detail rows show import method (full name, not short
+code), row count, positions-as-of date, and imported-at timestamp.
+
+Also fixes four Ant Design v6 console warnings and the Admin notification settings
+"useForm not connected" warning.
+
+## Deployment
+
+```bash
+git tag v1.5.0
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.4.3
 
 **Date:** 2026-05-24

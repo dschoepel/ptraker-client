@@ -110,4 +110,9 @@ export const userService = {
     const response = await api.patch('/user/importer-preferences', { preferences });
     return response.data;
   },
+
+  purgeImportHistory: async () => {
+    const response = await api.post('/user/purge-import-history');
+    return response.data;
+  },
 };
