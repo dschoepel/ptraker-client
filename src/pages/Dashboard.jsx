@@ -931,7 +931,7 @@ const Dashboard = () => {
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
-            if (key !== 'mine') loadSharedDashboard(key);
+            if (key !== 'mine' && key !== 'analytics') loadSharedDashboard(key);
           }}
           items={tabItems}
         />

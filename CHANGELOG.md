@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.3] — 2026-05-24
+
+### Fixed
+- Dashboard: clicking the Analytics tab while shared portfolio tabs are present no longer triggers a 403 API call (`GET /shares/analytics/dashboard`) — the tab `onChange` handler now correctly excludes the `'analytics'` key from the shared dashboard load path
+
+---
+
 ## [1.4.2] — 2026-05-22
 
 ### Fixed

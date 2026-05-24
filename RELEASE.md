@@ -1,3 +1,27 @@
+# Release Notes — v1.4.3
+
+**Date:** 2026-05-24
+**Type:** Patch — Analytics tab 403 fix
+
+## Summary
+
+Fixes a bug where clicking the Analytics tab on the Dashboard while one or more
+shared portfolio tabs are present triggered a spurious API call:
+`GET /api/v1/shares/analytics/dashboard` → 403 Forbidden.
+
+The `onChange` handler for the Tabs component was calling `loadSharedDashboard(key)`
+for any tab key that wasn't `'mine'`, but `'analytics'` is a local tab key, not a
+user ID. Added `&& key !== 'analytics'` to the guard condition.
+
+## Deployment
+
+```bash
+git tag v1.4.3
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.4.2
 
 **Date:** 2026-05-22
