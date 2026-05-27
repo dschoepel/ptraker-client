@@ -1,3 +1,25 @@
+# Release Notes — v1.6.0
+
+**Date:** 2026-05-27
+**Type:** Minor — custom profile photo upload
+
+## Summary
+
+Users can now upload a custom profile photo from the Profile & Settings page.
+Selecting a file shows an instant preview before committing. Saving uploads to
+the API, which stores the image in Supabase Storage and returns a public URL.
+The avatar in the app header (mobile and desktop) updates immediately and
+persists across page reloads and fresh logins via an AuthContext startup fetch.
+
+## Deployment
+
+```bash
+git tag v1.6.0
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.5.0
 
 **Date:** 2026-05-24

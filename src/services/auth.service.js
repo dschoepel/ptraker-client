@@ -39,8 +39,22 @@ export const authService = {
     return response.data;
   },
 
+  uploadAvatar: async (file) => {
+    const form = new FormData();
+    form.append('avatar', file);
+    const response = await api.post('/auth/profile/avatar', form, {
+      headers: { 'Content-Type': undefined },
+    });
+    return response.data;
+  },
+
+  removeAvatar: async () => {
+    const response = await api.delete('/auth/profile/avatar');
+    return response.data;
+  },
+
   forgotPassword: async (email) => {
-  const response = await api.post('/auth/forgot-password', { email });
-  return response.data;
-},
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
 };

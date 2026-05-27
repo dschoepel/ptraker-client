@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Typography, Card, Form, Input, Button, Space,
   Divider, Tag, Alert, Modal, Table, Popconfirm, Switch,
-  Select, Radio, Checkbox, Collapse, Spin,
+  Select, Radio, Checkbox, Collapse, Spin, Avatar,
 } from 'antd';
 import {
   UserOutlined, ShareAltOutlined, CrownOutlined,
   DeleteOutlined, PlusOutlined, EyeOutlined, TeamOutlined, DownloadOutlined,
-  ImportOutlined, HistoryOutlined,
+  ImportOutlined, HistoryOutlined, UploadOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/useAuth';
@@ -637,6 +637,10 @@ const Profile = () => {
   const { user, updateUser, logout }  = useAuth();
   const [form]                        = Form.useForm();
   const [saving, setSaving]           = useState(false);
+  const [pendingFile, setPendingFile]   = useState(null);
+  const [previewUrl, setPreviewUrl]     = useState(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const fileInputRef                    = useRef(null);
   const message = useMessage();
   const navigate = useNavigate();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -664,6 +668,40 @@ const [deleting, setDeleting]               = useState(false);
       message.error('Failed to update profile');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const clearPending = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPendingFile(null);
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!pendingFile) return;
+    setAvatarSaving(true);
+    try {
+      const { avatarUrl: newUrl } = await authService.uploadAvatar(pendingFile);
+      updateUser({ ...user, avatarUrl: newUrl });
+      clearPending();
+      message.success('Profile photo updated');
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Failed to upload photo');
+    } finally {
+      setAvatarSaving(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatarSaving(true);
+    try {
+      await authService.removeAvatar();
+      updateUser({ ...user, avatarUrl: null });
+      message.success('Profile photo removed');
+    } catch {
+      message.error('Failed to remove photo');
+    } finally {
+      setAvatarSaving(false);
     }
   };
 
@@ -730,6 +768,64 @@ const [deleting, setDeleting]               = useState(false);
             <Text style={{ color: brandColors.textSecondary }}>Role:</Text>
             <RoleBadge role={user?.role || user?.user_metadata?.role || 'user'} />
           </Space>
+
+          <Divider style={{ borderColor: brandColors.darkBorder, margin: '8px 0' }} />
+
+          {/* Profile Photo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <Avatar
+              size={80}
+              src={previewUrl || user?.avatarUrl || undefined}
+              icon={<UserOutlined />}
+              style={{ background: brandColors.gold, color: '#000', flexShrink: 0 }}
+            />
+            <div>
+              <Space size={8} style={{ marginBottom: 6 }}>
+                <Button
+                  size="small"
+                  icon={<UploadOutlined />}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarSaving}
+                >
+                  {user?.avatarUrl ? 'Change Photo' : 'Upload Photo'}
+                </Button>
+                {user?.avatarUrl && (
+                  <Button size="small" danger onClick={handleRemoveAvatar} loading={avatarSaving}>
+                    Remove
+                  </Button>
+                )}
+              </Space>
+              {pendingFile && (
+                <Space size={8} style={{ display: 'flex', marginBottom: 6 }}>
+                  <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>{pendingFile.name}</Text>
+                  <Button size="small" type="primary" onClick={handleSaveAvatar} loading={avatarSaving}>
+                    Save Photo
+                  </Button>
+                  <Button size="small" onClick={clearPending} disabled={avatarSaving}>
+                    Cancel
+                  </Button>
+                </Space>
+              )}
+              <Text style={{ color: brandColors.textMuted, fontSize: 11, display: 'block' }}>
+                Max 2 MB · JPEG, PNG, WebP, or GIF
+              </Text>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    if (previewUrl) URL.revokeObjectURL(previewUrl);
+                    setPreviewUrl(URL.createObjectURL(f));
+                    setPendingFile(f);
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </div>
+          </div>
 
           <Divider style={{ borderColor: brandColors.darkBorder, margin: '8px 0' }} />
 

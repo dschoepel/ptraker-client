@@ -48,6 +48,23 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('ptraker_user', JSON.stringify(updatedUser));
   }, []);
 
+  // Hydrate avatarUrl from the API profile on startup so it shows after page reload
+  useEffect(() => {
+    if (!token) return;
+    authService.getProfile()
+      .then(data => {
+        if (data?.profile?.avatarUrl !== undefined) {
+          setUser(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, avatarUrl: data.profile.avatarUrl };
+            localStorage.setItem('ptraker_user', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Detect Supabase auth redirect (invite acceptance, password recovery)
 // These arrive as URL hash fragments: #access_token=xxx&type=invite
 useEffect(() => {

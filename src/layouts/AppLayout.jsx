@@ -206,6 +206,7 @@ const AppLayout = () => {
             >
               <Avatar
                 size={32}
+                src={user?.avatarUrl || undefined}
                 icon={<UserOutlined />}
                 style={{ background: brandColors.gold, color: "#000" }}
               />
@@ -359,6 +360,7 @@ const AppLayout = () => {
               >
                 <Avatar
                   size={32}
+                  src={user?.avatarUrl || undefined}
                   icon={<UserOutlined />}
                   style={{ background: brandColors.gold, color: "#000" }}
                 />

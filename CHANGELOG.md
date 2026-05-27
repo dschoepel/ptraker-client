@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.6.0] — 2026-05-27
+
+### Added
+- Profile page: **Profile Photo** section — upload a custom photo (JPEG, PNG, WebP, GIF, max 2 MB); live preview before saving; Remove button to revert to default icon
+- Avatar in app header (mobile + desktop) now shows the user's photo when set
+- `authService.uploadAvatar(file)` and `authService.removeAvatar()` in `auth.service.js`
+- `AuthContext` hydrates `avatarUrl` from `GET /auth/profile` on startup so the avatar persists correctly after page reload or fresh login
+
+---
+
 ## [1.5.0] — 2026-05-24
 
 ### Added
