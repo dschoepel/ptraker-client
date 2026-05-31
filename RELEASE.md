@@ -1,3 +1,22 @@
+# Release Notes — v1.7.1
+
+**Date:** 2026-05-31
+**Type:** Patch — Node.js 24 Actions opt-in
+
+## Summary
+
+Opts the GitHub Actions workflow into Node.js 24 ahead of the forced migration
+on June 16, 2026 (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true`).
+
+## Deployment
+
+```bash
+git tag v1.7.1
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.7.0
 
 **Date:** 2026-05-31
