@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.7.0] — 2026-05-31
+
+### Added
+- **Portfolio Value Over Time** chart on the Analytics tab (`PortfolioHistoryChart`):
+  - Area chart with range tabs: All / 1Y / YTD / 6M / 1M
+  - Stats panel: Starting Value, Ending Value, Total Return ($  and %)
+  - Estimated vs. tracked visual distinction: shaded region + dashed "Tracking began" reference line for backfilled data
+  - Collapsible card header (click title to collapse/expand)
+- **AccountSelector** custom dropdown: grouped by institution, master "All Accounts" checkbox, per-account current value, selection count in trigger label; filtering updates chart and stats client-side without re-fetching
+- **Institution breakdown** (Ant Design Collapse): per-institution mini area chart + account table showing current value and return for the selected time range; hidden when all accounts in an institution are deselected
+- **Backfill controls**: lookback selector (1 month – 2 years) and Run Backfill button; collapsible amber disclaimer alert explaining estimated-value limitation
+- `analyticsService.getHistory(days)` and `analyticsService.runBackfill(lookbackDays)` added to `dashboard.service.js`
+- Accounts page: "Include in portfolio value history snapshot" checkbox in account edit modal; persists via `includeInSnapshot` on the PATCH endpoint
+
+---
+
 ## [1.6.0] — 2026-05-27
 
 ### Added

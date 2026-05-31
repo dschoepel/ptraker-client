@@ -1,3 +1,33 @@
+# Release Notes — v1.7.0
+
+**Date:** 2026-05-31
+**Type:** Minor — portfolio value history chart
+
+## Summary
+
+New "Portfolio Value Over Time" section at the top of the Analytics tab.
+Shows an area chart of total portfolio value across time with range tabs
+(All / 1Y / YTD / 6M / 1M), a stats panel (starting/ending value, total
+return), and an institution breakdown with mini-charts and per-account tables.
+
+An account selector dropdown (grouped by institution) lets users include or
+exclude individual accounts; the chart updates instantly without re-fetching.
+Backfilled (estimated) data is visually distinguished from real nightly
+snapshots via a shaded region and a "Tracking began" reference line.
+
+To start collecting history, open Accounts, enable "Include in portfolio value
+history snapshot" on each account to track, then visit Analytics and run a
+backfill.
+
+## Deployment
+
+```bash
+git tag v1.7.0
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.6.0
 
 **Date:** 2026-05-27

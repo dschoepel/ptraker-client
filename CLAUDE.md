@@ -94,7 +94,7 @@ useEffect(() => { fetchData(); }, [refreshKey]);
 ## Services
 - `api.js` — Axios instance, auto-injects Bearer token, handles 401 refresh
 - `auth.service.js` — supabaseAuth client; forgotPassword calls Express API
-- `dashboard.service.js` — dashboardService, positionService, accountService, importService, priceService, watchlistService
+- `dashboard.service.js` — dashboardService, positionService, accountService, importService, priceService, watchlistService, analyticsService
 - `admin.service.js` — adminService, importerService, sharesService, userService (includes getImporterPreferences, updateImporterPreferences)
 
 ## Pages & Access
@@ -135,8 +135,15 @@ if (hash) {
 ## Dashboard Architecture
 - `SummaryCards` — net worth, cost basis, gain/loss, gain % stats
 - `PortfolioView` — reusable, accepts `isOwn`, `isViewer`, `readOnly` props
-- `AnalyticsView` — charts tab: institution donut+bar, account type donut, cash bar
+- `AnalyticsView` — charts tab: opens with `PortfolioHistoryChart`, then institution donut+bar, account type donut, cash bar
 - Tabs: My Portfolio | Analytics | [shared portfolios if any]
+
+## Portfolio History Components (Dashboard.jsx — top-level, before AnalyticsView)
+- `PortfolioHistoryChart` — fetches from `analyticsService.getHistory(730)` on mount; derives all chart data client-side from flat `{ date, accountId, value, isBackfilled }` rows; collapsible via title click
+- `AccountSelector` — custom `Dropdown` overlay grouped by institution; master checkbox + per-group + per-account; triggers no API re-fetch on selection change
+- `InstitutionMiniChart` — small AreaChart for institution Collapse panels; each instance needs a unique `gradientId` prop to avoid SVG `url(#id)` collisions
+- `aggregateSeries(rows)` — helper that sums rows by date into `[{ date, value, isBackfilled }]`
+- Trading-day filter in backfill: weekend exclusion + ≥40% tickers must have data (catches holidays)
 
 ## Analytics Charts (Recharts)
 Data derived client-side from `accounts[]` and `positions[]`:
