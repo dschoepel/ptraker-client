@@ -669,12 +669,14 @@ const PortfolioHistoryChart = () => {
     const ids = instAccts.map(a => a.id);
     instSeries[inst] = aggregateSeries(rangeFiltered.filter(r => ids.includes(r.accountId)));
   }
-  // Sort institutions by latest total value (descending)
-  const sortedInstitutions = Object.keys(instGroups).sort((a, b) => {
-    const aVal = instSeries[a]?.at(-1)?.value ?? 0;
-    const bVal = instSeries[b]?.at(-1)?.value ?? 0;
-    return bVal - aVal;
-  });
+  // Only show institutions where at least one account is selected; sort by latest value desc
+  const sortedInstitutions = Object.keys(instGroups)
+    .filter(inst => instGroups[inst].some(a => selectedAccountIds.includes(a.id)))
+    .sort((a, b) => {
+      const aVal = instSeries[a]?.at(-1)?.value ?? 0;
+      const bVal = instSeries[b]?.at(-1)?.value ?? 0;
+      return bVal - aVal;
+    });
 
   // --- Date range display string ---
   const dateRangeStr = totalSeries.length >= 2
