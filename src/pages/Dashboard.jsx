@@ -2,17 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Row, Col, Card, Statistic, Table, Tag, Typography,
   Spin, Alert, Grid, Space, Collapse, Tabs,
-  Button, Checkbox, Select,
+  Button, Checkbox, Select, Divider, Dropdown,
 } from 'antd';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   Tooltip as ReTooltip, ResponsiveContainer, LabelList,
+  AreaChart, Area, CartesianGrid, ReferenceArea, ReferenceLine,
 } from 'recharts';
 import {
   ArrowUpOutlined, ArrowDownOutlined, MinusOutlined,
-  RightOutlined, ReloadOutlined, CrownOutlined, FilterOutlined,
+  RightOutlined, DownOutlined, ReloadOutlined, CrownOutlined, FilterOutlined,
 } from '@ant-design/icons';
-import { dashboardService, priceService } from '../services/dashboard.service';
+import { dashboardService, priceService, analyticsService } from '../services/dashboard.service';
 import { sharesService } from '../services/admin.service';
 import {
   formatCurrency, formatPercent, formatShares,
@@ -343,6 +344,641 @@ const AccountPositionsTable = ({ positions, accountSummary, isMobile }) => {
 };
 
 // =============================================================================
+// Portfolio History — constants and helpers
+// =============================================================================
+
+const HISTORY_RANGES = [
+  { label: 'All', days: null },
+  { label: '1Y',  days: 365 },
+  { label: 'YTD', days: null, ytd: true },
+  { label: '6M',  days: 180 },
+  { label: '1M',  days: 30 },
+];
+
+const formatXTick = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+const formatDateLabel = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const formatYTick = (v) => {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}k`;
+  return `$${v}`;
+};
+
+// Aggregate flat history rows into [{ date, value, isBackfilled }] sorted by date
+const aggregateSeries = (rows) => {
+  const map = new Map();
+  for (const row of rows) {
+    if (!map.has(row.date)) map.set(row.date, { value: 0, isBackfilled: row.isBackfilled });
+    const e = map.get(row.date);
+    e.value += row.value;
+    if (row.isBackfilled) e.isBackfilled = true;
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, d]) => ({ date, value: d.value, isBackfilled: d.isBackfilled }));
+};
+
+// =============================================================================
+// HistoryTooltip — custom Recharts tooltip for the area charts
+// =============================================================================
+const HistoryTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  const point = payload[0];
+  return (
+    <div style={{
+      background: '#1a1d23', border: `1px solid ${brandColors.darkBorder}`,
+      borderRadius: 8, padding: '10px 14px', fontSize: 13,
+    }}>
+      <div style={{ color: brandColors.textMuted, marginBottom: 4 }}>{formatXTick(label)}</div>
+      <div style={{ color: brandColors.gold, fontWeight: 600 }}>{formatCurrency(point.value)}</div>
+      {point.payload?.isBackfilled && (
+        <div style={{ color: brandColors.textMuted, fontSize: 11, marginTop: 2 }}>estimated (backfill)</div>
+      )}
+    </div>
+  );
+};
+
+// =============================================================================
+// InstitutionMiniChart — small area chart inside Collapse panels
+// =============================================================================
+const InstitutionMiniChart = ({ series, transitionDate, gradientId }) => {
+  if (!series || series.length === 0) return null;
+  const hasBackfill = series.some(s => s.isBackfilled);
+  return (
+    <ResponsiveContainer width="100%" height={140}>
+      <AreaChart data={series} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={brandColors.gold} stopOpacity={0.2} />
+            <stop offset="95%" stopColor={brandColors.gold} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke={brandColors.darkBorder} vertical={false} />
+        <XAxis dataKey="date" tickFormatter={formatXTick}
+          tick={{ fill: brandColors.textMuted, fontSize: 10 }}
+          axisLine={false} tickLine={false} interval="preserveStartEnd" />
+        <YAxis tickFormatter={formatYTick}
+          tick={{ fill: brandColors.textMuted, fontSize: 10 }}
+          axisLine={false} tickLine={false} width={52} />
+        <ReTooltip content={<HistoryTooltip />} />
+        {hasBackfill && series.length > 0 && (
+          <ReferenceArea
+            x1={series[0].date}
+            x2={transitionDate || series[series.length - 1].date}
+            fill="rgba(255,255,255,0.04)" stroke="none"
+          />
+        )}
+        {transitionDate && hasBackfill && (
+          <ReferenceLine x={transitionDate} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
+        )}
+        <Area type="monotone" dataKey="value" stroke={brandColors.gold} strokeWidth={1.5}
+          fill={`url(#${gradientId})`} dot={false} activeDot={{ r: 3, fill: brandColors.gold }} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+};
+
+// =============================================================================
+// AccountSelector — custom dropdown matching LPL's account picker UX
+// Groups accounts by institution; shows master checkbox + per-account values
+// =============================================================================
+const AccountSelector = ({ accounts, latestValueByAccount, selectedIds, onChange }) => {
+  const [open, setOpen] = useState(false);
+
+  const allSelected = accounts.length > 0 && selectedIds.length === accounts.length;
+  const noneSelected = selectedIds.length === 0;
+
+  const groups = {};
+  for (const acct of accounts) {
+    if (!groups[acct.institution]) groups[acct.institution] = [];
+    groups[acct.institution].push(acct);
+  }
+
+  const handleMaster = () => onChange(allSelected ? [] : accounts.map(a => a.id));
+
+  const handleGroup = (inst) => {
+    const ids = groups[inst].map(a => a.id);
+    const allIn = ids.every(id => selectedIds.includes(id));
+    onChange(allIn
+      ? selectedIds.filter(id => !ids.includes(id))
+      : [...new Set([...selectedIds, ...ids])]);
+  };
+
+  const handleAccount = (id) => {
+    onChange(selectedIds.includes(id)
+      ? selectedIds.filter(x => x !== id)
+      : [...selectedIds, id]);
+  };
+
+  const triggerLabel = allSelected
+    ? `✓ All Accounts Selected (${accounts.length} of ${accounts.length} Accounts)`
+    : `${selectedIds.length} of ${accounts.length} Accounts Selected`;
+
+  const overlay = (
+    <div
+      style={{
+        background: '#1f2229',
+        border: `1px solid ${brandColors.darkBorder}`,
+        borderRadius: 8, padding: '6px 0',
+        minWidth: 320, maxWidth: 420,
+        maxHeight: 420, overflowY: 'auto',
+        boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
+      }}
+      onClick={e => e.stopPropagation()}
+    >
+      {/* Master checkbox */}
+      <div style={{ padding: '6px 14px 8px', borderBottom: `1px solid ${brandColors.darkBorder}`, marginBottom: 4 }}>
+        <Checkbox
+          checked={allSelected}
+          indeterminate={!allSelected && !noneSelected}
+          onChange={handleMaster}
+          style={{ color: '#fff', fontWeight: 600 }}
+        >
+          All Accounts
+        </Checkbox>
+      </div>
+
+      {/* Institution groups */}
+      {Object.entries(groups).map(([inst, instAccounts]) => {
+        const gIds = instAccounts.map(a => a.id);
+        const selCount = gIds.filter(id => selectedIds.includes(id)).length;
+        const allGrp = selCount === gIds.length;
+        const someGrp = selCount > 0 && !allGrp;
+        return (
+          <div key={inst}>
+            <div style={{ padding: '6px 14px 2px' }}>
+              <Checkbox
+                checked={allGrp} indeterminate={someGrp}
+                onChange={() => handleGroup(inst)}
+              >
+                <span style={{ color: brandColors.textMuted, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {institutionName(inst)} ({selCount} of {gIds.length} selected)
+                </span>
+              </Checkbox>
+            </div>
+            {instAccounts.map(acct => {
+              const latestVal = latestValueByAccount[acct.id];
+              return (
+                <div
+                  key={acct.id}
+                  style={{ padding: '4px 14px 4px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                  onClick={() => handleAccount(acct.id)}
+                >
+                  <Checkbox
+                    checked={selectedIds.includes(acct.id)}
+                    onChange={() => handleAccount(acct.id)}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <span style={{ color: '#fff', fontSize: 13 }}>{acct.name}</span>
+                    {acct.accountNumberLast4 && (
+                      <span style={{ color: brandColors.textMuted, fontSize: 11, marginLeft: 6 }}>
+                        ••••{acct.accountNumberLast4}
+                      </span>
+                    )}
+                  </Checkbox>
+                  {latestVal !== undefined && (
+                    <Text style={{ color: brandColors.textSecondary, fontSize: 12, flexShrink: 0, marginLeft: 8 }}>
+                      {formatCurrency(latestVal, { decimals: 0 })}
+                    </Text>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  if (accounts.length === 0) return null;
+
+  return (
+    <Dropdown open={open} onOpenChange={setOpen} trigger={['click']} dropdownRender={() => overlay}>
+      <Button
+        style={{
+          borderColor: allSelected ? brandColors.gold : brandColors.darkBorder,
+          color: allSelected ? brandColors.gold : brandColors.textSecondary,
+          background: 'transparent', fontWeight: 600, fontSize: 13,
+        }}
+      >
+        {triggerLabel} ▾
+      </Button>
+    </Dropdown>
+  );
+};
+
+// =============================================================================
+// PortfolioHistoryChart — main portfolio value over time chart + controls
+// Fetches its own data from analyticsService; does not depend on dashboard data.
+// =============================================================================
+const PortfolioHistoryChart = () => {
+  const [rawHistory, setRawHistory]         = useState([]);
+  const [accounts, setAccounts]             = useState([]);
+  const [selectedAccountIds, setSelectedAccountIds] = useState([]);
+  const [activeRange, setActiveRange]       = useState(HISTORY_RANGES[1]); // '1Y'
+  const [loading, setLoading]               = useState(true);
+  const [backfilling, setBackfilling]       = useState(false);
+  const [backfillDays, setBackfillDays]     = useState(365);
+  const [error, setError]                   = useState(null);
+  const [collapsed, setCollapsed]           = useState(false);
+  const [warningOpen, setWarningOpen]       = useState(true);
+  const message = useMessage();
+
+  // --- Load once on mount ---
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await analyticsService.getHistory(730);
+        if (cancelled) return;
+        const accts = data.accounts || [];
+        setRawHistory(data.history || []);
+        setAccounts(accts);
+        setSelectedAccountIds(accts.map(a => a.id));
+      } catch {
+        if (!cancelled) setError('Failed to load portfolio history');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // --- Filter by selected accounts ---
+  const accountFiltered = rawHistory.filter(r => selectedAccountIds.includes(r.accountId));
+
+  // --- Filter by date range ---
+  const now = new Date();
+  const getRangeCutoff = () => {
+    if (activeRange.ytd) return `${now.getFullYear()}-01-01`;
+    if (!activeRange.days) return null;  // 'All'
+    const d = new Date();
+    d.setDate(d.getDate() - activeRange.days);
+    return d.toISOString().split('T')[0];
+  };
+  const rangeCutoff = getRangeCutoff();
+  const rangeFiltered = rangeCutoff
+    ? accountFiltered.filter(r => r.date >= rangeCutoff)
+    : accountFiltered;
+
+  // --- Aggregate total series ---
+  const totalSeries = aggregateSeries(rangeFiltered);
+
+  // --- Stats ---
+  const startingValue = totalSeries[0]?.value ?? 0;
+  const endingValue   = totalSeries[totalSeries.length - 1]?.value ?? 0;
+  const changeAmt     = endingValue - startingValue;
+  const changePct     = startingValue > 0 ? (changeAmt / startingValue) * 100 : 0;
+
+  // --- Estimated/tracked boundary ---
+  const transitionDate = totalSeries.find(s => !s.isBackfilled)?.date ?? null;
+  const hasAnyBackfill = totalSeries.some(s => s.isBackfilled);
+
+  // --- Latest value per account (for AccountSelector) ---
+  const latestValueByAccount = {};
+  for (const row of rawHistory) {
+    const existing = latestValueByAccount[row.accountId];
+    if (!existing || row.date > existing.date) {
+      latestValueByAccount[row.accountId] = { date: row.date, value: row.value };
+    }
+  }
+  // Expose flat value only
+  const latestValues = {};
+  for (const [id, d] of Object.entries(latestValueByAccount)) latestValues[id] = d.value;
+
+  // --- Institution groups and per-institution series ---
+  const instGroups = {};
+  for (const acct of accounts) {
+    if (!instGroups[acct.institution]) instGroups[acct.institution] = [];
+    instGroups[acct.institution].push(acct);
+  }
+  const instSeries = {};
+  for (const [inst, instAccts] of Object.entries(instGroups)) {
+    const ids = instAccts.map(a => a.id);
+    instSeries[inst] = aggregateSeries(rangeFiltered.filter(r => ids.includes(r.accountId)));
+  }
+  // Sort institutions by latest total value (descending)
+  const sortedInstitutions = Object.keys(instGroups).sort((a, b) => {
+    const aVal = instSeries[a]?.at(-1)?.value ?? 0;
+    const bVal = instSeries[b]?.at(-1)?.value ?? 0;
+    return bVal - aVal;
+  });
+
+  // --- Date range display string ---
+  const dateRangeStr = totalSeries.length >= 2
+    ? `${formatDateLabel(totalSeries[0].date)} – ${formatDateLabel(totalSeries[totalSeries.length - 1].date)}`
+    : null;
+
+  // --- Backfill handler ---
+  const handleBackfill = async () => {
+    setBackfilling(true);
+    try {
+      const result = await analyticsService.runBackfill(backfillDays);
+      message.success(result.message || 'Backfill complete');
+      const data = await analyticsService.getHistory(730);
+      const accts = data.accounts || [];
+      setRawHistory(data.history || []);
+      setAccounts(accts);
+      setSelectedAccountIds(accts.map(a => a.id));
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Backfill failed. Ensure at least one account is opted in.');
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
+  const hasData = totalSeries.length > 0;
+  const cardStyle = { borderColor: brandColors.darkBorder, marginBottom: 24 };
+
+  return (
+    <Card size="small" style={cardStyle}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: collapsed ? 0 : 16 }}>
+        <div
+          onClick={() => setCollapsed(c => !c)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}
+        >
+          {collapsed
+            ? <RightOutlined style={{ color: brandColors.textMuted, fontSize: 12 }} />
+            : <DownOutlined style={{ color: brandColors.textMuted, fontSize: 12 }} />
+          }
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: 700 }}>Portfolio Value Over Time</Text>
+        </div>
+        <Space size={12} style={{ flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <AccountSelector
+            accounts={accounts}
+            latestValueByAccount={latestValues}
+            selectedIds={selectedAccountIds}
+            onChange={setSelectedAccountIds}
+          />
+          {hasData && (
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ color: brandColors.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Value</div>
+              <div style={{ color: brandColors.gold, fontSize: 18, fontWeight: 700 }}>{formatCurrency(endingValue, { decimals: 0 })}</div>
+            </div>
+          )}
+        </Space>
+      </div>
+
+      {!collapsed && <>
+      {/* Range selector */}
+      <Space size={2} style={{ marginBottom: 10 }}>
+        {HISTORY_RANGES.map(r => (
+          <Button
+            key={r.label}
+            size="small"
+            type={activeRange.label === r.label ? 'primary' : 'text'}
+            onClick={() => setActiveRange(r)}
+            style={{ minWidth: 38, fontWeight: activeRange.label === r.label ? 700 : 400, fontSize: 12 }}
+          >
+            {r.label}
+          </Button>
+        ))}
+      </Space>
+
+      {/* Estimated vs tracked legend */}
+      {!loading && hasAnyBackfill && hasData && (
+        <Space size={16} style={{ fontSize: 11, color: brandColors.textMuted, marginBottom: 10, display: 'flex' }}>
+          <Space size={4}>
+            <span style={{ display: 'inline-block', width: 14, height: 11, background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.15)', verticalAlign: 'middle' }} />
+            <span>Estimated (backfill)</span>
+          </Space>
+          <Space size={4}>
+            <span style={{ display: 'inline-block', width: 18, height: 2, background: brandColors.gold, verticalAlign: 'middle' }} />
+            <span>Tracked</span>
+          </Space>
+        </Space>
+      )}
+
+      {/* Content */}
+      {loading ? (
+        <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Spin />
+        </div>
+      ) : error ? (
+        <Alert type="error" message={error} style={{ marginBottom: 16 }} />
+      ) : !hasData ? (
+        <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+          <Text style={{ color: brandColors.textMuted }}>No snapshot data yet.</Text>
+          <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>Run a backfill below, or wait for the next nightly snapshot (5 pm CT weekdays).</Text>
+        </div>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {/* Stats panel */}
+          <Col xs={24} sm={8} md={6}>
+            <Space orientation="vertical" size={20} style={{ width: '100%' }}>
+              <div>
+                <div style={{ color: brandColors.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Starting Value</div>
+                <div style={{ color: brandColors.textSecondary, fontSize: 15, fontWeight: 600 }}>{formatCurrency(startingValue, { decimals: 0 })}</div>
+                {totalSeries[0]?.date && <div style={{ color: brandColors.textMuted, fontSize: 11 }}>{formatDateLabel(totalSeries[0].date)}</div>}
+              </div>
+              <div>
+                <div style={{ color: brandColors.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Ending Value</div>
+                <div style={{ color: '#fff', fontSize: 15, fontWeight: 600 }}>{formatCurrency(endingValue, { decimals: 0 })}</div>
+                {totalSeries.at(-1)?.date && <div style={{ color: brandColors.textMuted, fontSize: 11 }}>{formatDateLabel(totalSeries.at(-1).date)}</div>}
+              </div>
+              <div>
+                <div style={{ color: brandColors.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Total Return</div>
+                <div style={{ color: gainLossColor(changeAmt), fontSize: 15, fontWeight: 600 }}>{formatCurrency(changeAmt, { decimals: 0 })}</div>
+                <div style={{ color: gainLossColor(changePct), fontSize: 12 }}>{formatPercent(changePct)}</div>
+              </div>
+            </Space>
+          </Col>
+
+          {/* Area chart */}
+          <Col xs={24} sm={16} md={18}>
+            {dateRangeStr && (
+              <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '2px 10px', fontSize: 12, color: brandColors.textSecondary, marginBottom: 8 }}>
+                {dateRangeStr}
+              </div>
+            )}
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={totalSeries} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={brandColors.gold} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={brandColors.gold} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={brandColors.darkBorder} vertical={false} />
+                <XAxis dataKey="date" tickFormatter={formatXTick}
+                  tick={{ fill: brandColors.textMuted, fontSize: 11 }}
+                  axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis tickFormatter={formatYTick}
+                  tick={{ fill: brandColors.textMuted, fontSize: 11 }}
+                  axisLine={false} tickLine={false} width={62} />
+                <ReTooltip content={<HistoryTooltip />} />
+
+                {/* Shaded estimated region */}
+                {hasAnyBackfill && totalSeries.length > 0 && (
+                  <ReferenceArea
+                    x1={totalSeries[0].date}
+                    x2={transitionDate || totalSeries.at(-1).date}
+                    fill="rgba(255,255,255,0.04)" stroke="none"
+                  />
+                )}
+                {/* Vertical line at tracking-start boundary */}
+                {transitionDate && hasAnyBackfill && (
+                  <ReferenceLine
+                    x={transitionDate}
+                    stroke="rgba(255,255,255,0.25)"
+                    strokeDasharray="4 4"
+                    label={{ value: 'Tracking began', position: 'insideTopRight', fontSize: 10, fill: 'rgba(255,255,255,0.35)', dy: 8 }}
+                  />
+                )}
+
+                <Area type="monotone" dataKey="value" stroke={brandColors.gold} strokeWidth={2}
+                  fill="url(#portfolioGradient)" dot={false} activeDot={{ r: 4, fill: brandColors.gold }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Col>
+        </Row>
+      )}
+
+      {/* Institution breakdown */}
+      {!loading && !error && hasData && sortedInstitutions.length > 0 && (
+        <>
+          <Divider style={{ borderColor: brandColors.darkBorder, margin: '20px 0 12px' }} />
+          <Collapse
+            ghost
+            size="small"
+            style={{ background: 'transparent' }}
+            items={sortedInstitutions.map(inst => {
+              const instAccts = instGroups[inst];
+              const series = instSeries[inst] || [];
+              const instEndVal = series.at(-1)?.value ?? 0;
+              const instStartVal = series[0]?.value ?? 0;
+              const instChangePct = instStartVal > 0 ? ((instEndVal - instStartVal) / instStartVal) * 100 : 0;
+
+              return {
+                key: inst,
+                label: (
+                  <Space size={14} style={{ flexWrap: 'wrap' }}>
+                    <Text style={{ color: '#fff', fontWeight: 600 }}>{institutionName(inst)}</Text>
+                    <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+                      {instAccts.length} account{instAccts.length !== 1 ? 's' : ''}
+                    </Text>
+                    <Text style={{ color: brandColors.textSecondary }}>{formatCurrency(instEndVal, { decimals: 0 })}</Text>
+                    <ColoredValue value={instChangePct} formatter={v => formatPercent(v)} />
+                  </Space>
+                ),
+                children: (
+                  <div>
+                    <InstitutionMiniChart
+                      series={series}
+                      transitionDate={transitionDate}
+                      gradientId={`inst-grad-${inst}`}
+                    />
+                    <Table
+                      dataSource={instAccts}
+                      rowKey="id"
+                      size="small"
+                      pagination={false}
+                      style={{ marginTop: 10 }}
+                      columns={[
+                        {
+                          title: 'Account', dataIndex: 'name',
+                          render: (name, acct) => (
+                            <Space orientation="vertical" size={0}>
+                              <Text style={{ color: '#fff', fontSize: 13 }}>{name}</Text>
+                              {acct.accountNumberLast4 && (
+                                <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>••••{acct.accountNumberLast4}</Text>
+                              )}
+                            </Space>
+                          ),
+                        },
+                        {
+                          title: 'Value', align: 'right', width: 110,
+                          render: (_, acct) => {
+                            const acctRows = rangeFiltered.filter(r => r.accountId === acct.id);
+                            const v = acctRows.at(-1)?.value;
+                            return <Text style={{ color: '#fff', fontSize: 13 }}>{v !== undefined ? formatCurrency(v, { decimals: 0 }) : '—'}</Text>;
+                          },
+                        },
+                        {
+                          title: 'Return', align: 'right', width: 80,
+                          render: (_, acct) => {
+                            const acctRows = rangeFiltered.filter(r => r.accountId === acct.id);
+                            if (acctRows.length < 2 || !acctRows[0].value) return <Text style={{ color: brandColors.textMuted }}>—</Text>;
+                            const pct = ((acctRows.at(-1).value - acctRows[0].value) / acctRows[0].value) * 100;
+                            return <ColoredValue value={pct} formatter={v => formatPercent(v)} />;
+                          },
+                        },
+                      ]}
+                    />
+                  </div>
+                ),
+              };
+            })}
+          />
+        </>
+      )}
+
+      {/* Backfill controls */}
+      <Divider style={{ borderColor: brandColors.darkBorder, margin: '20px 0 12px' }} />
+      <div
+        style={{
+          background: 'rgba(255,170,0,0.08)',
+          border: '1px solid rgba(255,170,0,0.25)',
+          borderRadius: 8, marginBottom: 12,
+        }}
+      >
+        <div
+          onClick={() => setWarningOpen(o => !o)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', cursor: 'pointer', userSelect: 'none' }}
+        >
+          <Space size={8}>
+            <span style={{ color: '#faad14', fontSize: 15 }}>⚠</span>
+            <span style={{ color: '#faad14', fontWeight: 600, fontSize: 13 }}>Historical values are estimated</span>
+          </Space>
+          {warningOpen
+            ? <DownOutlined style={{ color: brandColors.textMuted, fontSize: 10 }} />
+            : <RightOutlined style={{ color: brandColors.textMuted, fontSize: 10 }} />
+          }
+        </div>
+        {warningOpen && (
+          <div style={{ padding: '0 14px 12px', color: brandColors.textSecondary, fontSize: 12 }}>
+            Backfill calculates past values using your current holdings × historical prices. If you have changed positions over time, these values will not match actual historical balances.
+          </div>
+        )}
+      </div>
+      <Space size={8} style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+        <Text style={{ color: brandColors.textSecondary, fontSize: 13 }}>Backfill history:</Text>
+        <Select
+          value={backfillDays}
+          onChange={setBackfillDays}
+          size="small"
+          style={{ width: 130 }}
+          options={[
+            { value: 30,  label: '1 month' },
+            { value: 90,  label: '3 months' },
+            { value: 180, label: '6 months' },
+            { value: 365, label: '1 year' },
+            { value: 730, label: '2 years' },
+          ]}
+        />
+        <Button size="small" onClick={handleBackfill} loading={backfilling} style={{ fontWeight: 600 }}>
+          Run Backfill
+        </Button>
+      </Space>
+      </>}
+    </Card>
+  );
+};
+
+// =============================================================================
 // =============================================================================
 // AnalyticsView — charts: institution, account type, cash/liquidity
 // =============================================================================
@@ -440,6 +1076,7 @@ const AnalyticsView = ({ accounts, positions }) => {
 
   return (
     <div>
+      <PortfolioHistoryChart />
       <Row gutter={[16, 0]}>
         {/* ---- Institution ------------------------------------------------ */}
         <Col xs={24} xl={12}>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Typography, Modal, Form, Input,
   Select, Popconfirm, Alert, Spin, Grid, Tooltip,
-  Card, 
+  Card, Checkbox,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
@@ -233,6 +233,7 @@ const AccountFormModal = ({ open, onClose, onSave, initialValues, loading }) => 
     if (open) {
       form.setFieldsValue(initialValues || {
         name: '', institution: '', type: 'brokerage', accountNumberLast4: '', notes: '',
+        includeInSnapshot: false,
       });
     }
   }, [open, initialValues, form]);
@@ -295,6 +296,11 @@ const AccountFormModal = ({ open, onClose, onSave, initialValues, loading }) => 
         </Form.Item>
         <Form.Item name="notes" label="Notes (optional)">
           <Input.TextArea placeholder="Any notes about this account" rows={2} maxLength={500} />
+        </Form.Item>
+        <Form.Item name="includeInSnapshot" valuePropName="checked">
+          <Checkbox>
+            Include in portfolio value history snapshot
+          </Checkbox>
         </Form.Item>
       </Form>
     </Modal>
@@ -433,6 +439,7 @@ const Accounts = () => {
       institution: account.institution, type: account.type,
       accountNumberLast4: account.account_number_last4 || '',
       notes: account.notes || '',
+      includeInSnapshot: account.include_in_snapshot || false,
     });
     setModalOpen(true);
   };

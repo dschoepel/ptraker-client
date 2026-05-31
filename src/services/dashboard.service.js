@@ -97,6 +97,18 @@ export const priceService = {
   },
 };
 
+export const analyticsService = {
+  getHistory: async (days = 365) => {
+    const response = await api.get('/analytics/history', { params: { days } });
+    return response.data;
+  },
+
+  runBackfill: async (lookbackDays) => {
+    const response = await api.post('/analytics/backfill', { lookbackDays });
+    return response.data;
+  },
+};
+
 export const watchlistService = {
   getAll: async () => {
     const response = await api.get('/watchlist');
