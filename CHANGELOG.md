@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.8.0] — 2026-07-07
+
+### Added
+- **Watchlist % ↔ $ change toggle**: the Price column header now shows a `%` / `$` badge that toggles all rows between percentage change and dollar change. Tapping any change value in a row also toggles. Works on desktop and mobile. No API change — `change_amount` was already in the watchlist response.
+
+### Changed
+- Dependency patch updates (React 19.2.7, etc.) via `npm install`.
+
+---
+
 ## [1.7.1] — 2026-05-31
 
 ### Changed

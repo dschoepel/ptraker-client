@@ -1,3 +1,25 @@
+# Release Notes — v1.8.0
+
+**Date:** 2026-07-07
+**Type:** Minor — watchlist change toggle
+
+## Summary
+
+Adds a `%` / `$` toggle to the watchlist Price column. A badge in the column
+header switches all rows between percentage change and dollar-amount change.
+Tapping any change value in a row also toggles. Works on desktop and mobile.
+No API change needed — `change_amount` was already returned by the watchlist
+endpoint.
+
+## Deployment
+
+```bash
+git tag v1.8.0
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.7.1
 
 **Date:** 2026-05-31

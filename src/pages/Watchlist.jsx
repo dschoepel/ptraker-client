@@ -16,6 +16,12 @@ import api from '../services/api';
 
 const { Title, Text } = Typography;
 
+const formatDollarChange = (value) => {
+  if (value === null || value === undefined) return '—';
+  const prefix = value > 0 ? '+' : '';
+  return `${prefix}${formatCurrency(value)}`;
+};
+
 // =============================================================================
 // Sparkline — mini price chart for the last 30 days
 // =============================================================================
@@ -238,6 +244,7 @@ const Watchlist = () => {
   const [editItem, setEditItem]         = useState(null);
   const [saving, setSaving]             = useState(false);
   const [refreshKey, setRefreshKey]     = useState(0);
+  const [showDollar, setShowDollar]     = useState(false);
   const message = useMessage();
 
   useEffect(() => {
@@ -333,7 +340,17 @@ const Watchlist = () => {
       ),
     },
     {
-      title: 'Price',
+      title: (
+        <Space size={4} style={{ justifyContent: 'flex-end', width: '100%' }}>
+          <span>Price</span>
+          <Tag
+            style={{ cursor: 'pointer', fontSize: 10, lineHeight: '16px', padding: '0 5px', margin: 0 }}
+            onClick={() => setShowDollar(d => !d)}
+          >
+            {showDollar ? '$' : '%'}
+          </Tag>
+        </Space>
+      ),
       dataIndex: 'current_price',
       key: 'current_price',
       width: 120,
@@ -342,10 +359,16 @@ const Watchlist = () => {
         val ? (
           <Space orientation="vertical" size={0} style={{ textAlign: 'right' }}>
             <Text style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(val)}</Text>
-            <Space size={4}>
+            <Space
+              size={4}
+              style={{ cursor: 'pointer' }}
+              onClick={() => setShowDollar(d => !d)}
+            >
               <GainLossIndicator value={row.change_percent} />
               <Text style={{ fontSize: 12, color: gainLossColor(row.change_percent) }}>
-                {formatPercent(row.change_percent)}
+                {showDollar
+                  ? formatDollarChange(row.change_amount)
+                  : formatPercent(row.change_percent)}
               </Text>
             </Space>
           </Space>
