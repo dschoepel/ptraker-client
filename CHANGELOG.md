@@ -5,6 +5,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.8.2] — 2026-07-20
+
+### Fixed
+- **Mobile responsiveness sweep**: extends the Watchlist mobile card-list fix (v1.8.1) to the rest of the app.
+  - Profile: "Portfolio Sharing" table now renders a card list on mobile instead of clipping.
+  - Admin: Role Requests and Importers tables now render card lists on mobile, matching the existing Users table pattern.
+  - Dashboard: the Institution breakdown table inside Analytics `Collapse` panels now renders a card list on mobile; donut chart (By Institution / By Account Type) slice labels show percent-only on mobile instead of clipping long institution/account names off the left edge of the SVG.
+  - Import: results-summary and "positions removed" rows now wrap instead of overflowing on narrow screens; Import History account names truncate with an ellipsis instead of wrapping one character per line.
+
+---
+
 ## [1.8.1] — 2026-07-20
 
 ### Fixed

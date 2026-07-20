@@ -127,12 +127,13 @@ if (hash) {
 ```
 
 ## Mobile / Responsive
-- `isMobile = !screens.md` (from `Grid.useBreakpoint()`)
-- Accounts page: card list on mobile, table on desktop
-- Watchlist page: card list (`MobileWatchlistCard`) on mobile, table on desktop — same pattern as Accounts. Fixed-width Table columns clip on narrow viewports, so any new data-table page should default to this pattern rather than relying on horizontal scroll.
-- Dashboard: card layout adapts, filter panel collapses
-- Header rows: use `flexWrap: 'wrap'` and `gap` for mobile wrapping
+- `isMobile = !screens.md` (from `Grid.useBreakpoint()`) — every `Table` on a data page should have a mobile card-list fallback using this flag. As of v1.8.2 all pages (Accounts, Watchlist, Dashboard, Profile, Admin) follow this pattern; keep it for any new table.
+- Standalone sub-components not receiving `isMobile` as a prop (e.g. `ImporterManagement` in Admin.jsx) call `Grid.useBreakpoint()` themselves rather than threading the flag down — cheaper than prop-drilling through call sites that don't otherwise need it.
+- Card-list fallback shape: `isMobile ? <div>{items.map(row => ...)}</div> : <Table .../>`, rows separated by `<Divider style={{ margin: '12px 0' }} />`, a `flex space-between` row per item with `flexWrap: 'wrap'` — see the Users table in Admin.jsx for the reference implementation.
+- Text in a flex row that isn't given `flexShrink: 0`/`whiteSpace: 'nowrap'` will shrink to fit — without `minWidth: 0` + `overflow: hidden` + `textOverflow: 'ellipsis'` it can wrap one character per line instead of truncating (hit in Import History's account-name label). Give flexible text a `flex: '1 1 <px>'` basis and ellipsis instead of leaving it unconstrained.
+- Recharts donut/pie slice labels positioned outside the pie radius (`outerRadius + N`) can extend past the SVG's left edge on narrow mobile containers and get silently clipped — long labels (institution/account names) are especially at risk. Dashboard's `renderPieLabel` shows percent-only on mobile (full name is already in the legend below) to avoid this.
 - Recharts components sized for a fixed-width table cell (e.g. `Sparkline`) should accept a `width` prop so they can be reused at `width="100%"` inside a mobile card
+- Header rows: use `flexWrap: 'wrap'` and `gap` for mobile wrapping — applies to `Space` rows generally, not just header bars (hit in Import.jsx's results-summary and removed-positions rows)
 
 ## Dashboard Architecture
 - `SummaryCards` — net worth, cost basis, gain/loss, gain % stats

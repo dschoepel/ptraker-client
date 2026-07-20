@@ -1,3 +1,34 @@
+# Release Notes — v1.8.2
+
+**Date:** 2026-07-20
+**Type:** Patch — mobile responsiveness sweep
+
+## Summary
+
+Follow-up to v1.8.1, extending the Watchlist mobile card-list fix to the
+rest of the app after a full page-by-page audit:
+
+- Profile: "Portfolio Sharing" table → mobile card list
+- Admin: Role Requests and Importers tables → mobile card list (matches
+  the existing Users table pattern in the same file)
+- Dashboard: Institution breakdown table (Analytics `Collapse`) → mobile
+  card list; donut chart slice labels now show percent-only on mobile
+  instead of clipping long institution/account names off the left edge
+- Import: results-summary and "positions removed" rows now wrap instead
+  of overflowing; Import History account names truncate with an ellipsis
+  instead of wrapping one character per line
+
+No API change.
+
+## Deployment
+
+```bash
+git tag v1.8.2
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.8.1
 
 **Date:** 2026-07-20
