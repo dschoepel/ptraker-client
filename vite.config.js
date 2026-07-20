@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['favicon.ico', 'safari-pinned-tab.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'portfolioTraker',

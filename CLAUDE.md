@@ -135,6 +135,14 @@ if (hash) {
 - Recharts components sized for a fixed-width table cell (e.g. `Sparkline`) should accept a `width` prop so they can be reused at `width="100%"` inside a mobile card
 - Header rows: use `flexWrap: 'wrap'` and `gap` for mobile wrapping — applies to `Space` rows generally, not just header bars (hit in Import.jsx's results-summary and removed-positions rows)
 
+## PWA / Service Worker (v1.8.3+)
+- `vite.config.js`: `injectRegister: false` — the plugin's default auto-injected `registerSW.js` gives no update hooks, so registration is manual via `virtual:pwa-register` in `src/hooks/useAppUpdate.js` instead. `registerType` stays `'autoUpdate'`.
+- `useAppUpdate()` — registers the SW, exposes `{ needRefresh, applyUpdate }`. Polls `registration.update()` every 5 min plus on `visibilitychange` (catches a backgrounded PWA being reopened). `applyUpdate()` calls the plugin's `updateSW(true)`, which reloads automatically once the new SW takes control.
+- `usePullToRefresh(onRefresh, { threshold, holdDuration, disabled })` (`src/hooks/usePullToRefresh.js`) — hand-rolled touch gesture, no npm package. Only arms at `window.scrollY === 0`; requires holding past the pull threshold before release triggers `onRefresh`. Guards against AntD `Modal`s (which add `ant-scrolling-effect` to `<body>` while open) so a drag inside an open modal doesn't trigger a page reload.
+- `AppLayout.jsx` wires both together: pull-to-refresh (mobile only, `disabled: !isMobile`) and a background "Update available" notification both call the same refresh handler — `applyUpdate()` if an update is pending, else `window.location.reload()`. A standalone-mode fallback refresh button (`window.matchMedia('(display-mode: standalone)')`) sits in the mobile header as a discoverability backstop for the gesture.
+- **Critical infra dependency**: `nginx.conf`'s general `\.(js|css|...)$` rule caches everything `immutable` for 1 year — `sw.js`, `registerSW.js`, `manifest.webmanifest`, and `index.html` have explicit exact-match `location` blocks ABOVE it forcing `Cache-Control: no-cache`, or the browser never notices a new version was deployed. If Earth's reverse-proxy config (`nginxconfig.io/proxy.conf`/`general.conf`) ever adds its own caching layer, verify it doesn't re-cache these paths.
+- Version number: desktop shows `Client v{pkg.version}` / `API v{apiVersion}` in `AppLayout.jsx`'s `Footer`; mobile shows just `v{pkg.version}` in the fixed header (no desktop-style footer on mobile — see Mobile / Responsive above).
+
 ## Dashboard Architecture
 - `SummaryCards` — net worth, cost basis, gain/loss, gain % stats
 - `PortfolioView` — reusable, accepts `isOwn`, `isViewer`, `readOnly` props

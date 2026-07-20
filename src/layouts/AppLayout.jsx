@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Layout,
   Menu,
@@ -7,6 +7,7 @@ import {
   Dropdown,
   Typography,
   Grid,
+  App as AntdApp,
 } from "antd";
 import pkg from "../../package.json";
 import api from "../services/api";
@@ -20,11 +21,14 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   StarOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../store/useAuth";
 import { SettingOutlined, SafetyOutlined } from "@ant-design/icons";
 
-// import { App as AntdApp } from 'antd';
+import useAppUpdate from "../hooks/useAppUpdate";
+import usePullToRefresh from "../hooks/usePullToRefresh";
+import PullToRefreshIndicator from "../components/PullToRefreshIndicator";
 import { brandColors } from "../theme";
 
 const { Header, Sider, Content, Footer } = Layout;
@@ -123,6 +127,45 @@ const AppLayout = () => {
 
   const isMobile = !screens.md;
 
+  const { notification } = AntdApp.useApp();
+  const { needRefresh, applyUpdate } = useAppUpdate();
+  const notifiedRef = useRef(false);
+  const [isStandalone] = useState(
+    () => window.matchMedia("(display-mode: standalone)").matches
+  );
+
+  useEffect(() => {
+    if (!needRefresh || notifiedRef.current) return;
+    notifiedRef.current = true;
+    notification.info({
+      key: "app-update",
+      message: "Update available",
+      description: "A new version of portfolioTraker is ready.",
+      duration: 0,
+      btn: (
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => {
+            notification.destroy("app-update");
+            applyUpdate();
+          }}
+        >
+          Refresh
+        </Button>
+      ),
+    });
+  }, [needRefresh, notification, applyUpdate]);
+
+  const handlePullRefresh = useCallback(() => {
+    if (needRefresh) applyUpdate();
+    else window.location.reload();
+  }, [needRefresh, applyUpdate]);
+
+  const { pct, held, refreshing } = usePullToRefresh(handlePullRefresh, {
+    disabled: !isMobile,
+  });
+
   const handleMenuClick = ({ key }) => navigate(key);
 
   const handleLogout = async () => {
@@ -189,39 +232,56 @@ const AppLayout = () => {
             <Text style={{ color: "#fff", fontWeight: 600, fontSize: 15 }}>
               portfolio<span style={{ color: brandColors.gold }}>Traker</span>
             </Text>
+            <Text style={{ color: brandColors.textMuted, fontSize: 10 }}>
+              v{pkg.version}
+            </Text>
           </div>
 
-          <Dropdown
-            menu={{ items: userMenuItems }}
-            trigger={["click"]}
-            placement="bottomRight"
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                cursor: "pointer",
-              }}
-            >
-              <Avatar
-                size={32}
-                src={user?.avatarUrl || undefined}
-                icon={<UserOutlined />}
-                style={{ background: brandColors.gold, color: "#000" }}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {isStandalone && (
+              <Button
+                type="text"
+                size="small"
+                icon={<ReloadOutlined />}
+                onClick={handlePullRefresh}
+                aria-label="Refresh"
+                style={{ color: brandColors.textSecondary }}
               />
-              <Text
-                style={{ color: brandColors.textSecondary, fontSize: 13 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate("/profile");
+            )}
+            <Dropdown
+              menu={{ items: userMenuItems }}
+              trigger={["click"]}
+              placement="bottomRight"
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: "pointer",
                 }}
               >
-                {user?.displayName || user?.email}
-              </Text>
-            </div>
-          </Dropdown>
+                <Avatar
+                  size={32}
+                  src={user?.avatarUrl || undefined}
+                  icon={<UserOutlined />}
+                  style={{ background: brandColors.gold, color: "#000" }}
+                />
+                <Text
+                  style={{ color: brandColors.textSecondary, fontSize: 13 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate("/profile");
+                  }}
+                >
+                  {user?.displayName || user?.email}
+                </Text>
+              </div>
+            </Dropdown>
+          </div>
         </Header>
+
+        <PullToRefreshIndicator pct={pct} held={held} refreshing={refreshing} />
 
         <Content
           style={{
