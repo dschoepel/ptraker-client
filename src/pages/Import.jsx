@@ -63,8 +63,17 @@ const HistoryGrouped = ({ history, importers }) => {
     return {
       key: g.key,
       label: (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
-          <Text style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{g.label}</Text>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0, flexWrap: 'wrap' }}>
+          <Text
+            style={{
+              color: '#fff', fontWeight: 600, fontSize: 13,
+              flex: '1 1 120px', minWidth: 0,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}
+            title={g.label}
+          >
+            {g.label}
+          </Text>
           {g.accountInstitution && (
             <Tag color="default" style={{ margin: 0, flexShrink: 0 }}>{institutionName(g.accountInstitution)}</Tag>
           )}
@@ -652,10 +661,12 @@ const RemovedPositions = ({ positions, onAddToWatchlist, addingToWatchlist }) =>
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 8,
           padding: '10px 0',
           borderBottom: i < positions.length - 1 ? `1px solid ${brandColors.darkBorder}` : 'none',
         }}>
-          <Space size={12}>
+          <Space size={12} style={{ flexWrap: 'wrap' }}>
             <Space orientation="vertical" size={0}>
               <Text style={{ color: '#fff', fontWeight: 600 }}>{pos.ticker}</Text>
               <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>{pos.assetName}</Text>
@@ -714,7 +725,7 @@ const StepResults = ({ result, onImportAnother, onAddToWatchlist, addingToWatchl
 
           <Divider orientation="vertical" style={{ height: 60, borderColor: brandColors.darkBorder }} />
 
-          <Space size={24}>
+          <Space size={24} wrap>
             {result.filename && (
               <div>
                 <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>File</Text>

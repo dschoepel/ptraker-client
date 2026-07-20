@@ -591,6 +591,8 @@ const PortfolioHistoryChart = () => {
   const [error, setError]                   = useState(null);
   const [collapsed, setCollapsed]           = useState(false);
   const [warningOpen, setWarningOpen]       = useState(true);
+  const screens                             = useBreakpoint();
+  const isMobile                            = !screens.md;
   const message = useMessage();
 
   // --- Load once on mount ---
@@ -883,43 +885,75 @@ const PortfolioHistoryChart = () => {
                       transitionDate={transitionDate}
                       gradientId={`inst-grad-${inst}`}
                     />
-                    <Table
-                      dataSource={instAccts}
-                      rowKey="id"
-                      size="small"
-                      pagination={false}
-                      style={{ marginTop: 10 }}
-                      columns={[
-                        {
-                          title: 'Account', dataIndex: 'name',
-                          render: (name, acct) => (
-                            <Space orientation="vertical" size={0}>
-                              <Text style={{ color: '#fff', fontSize: 13 }}>{name}</Text>
-                              {acct.accountNumberLast4 && (
-                                <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>••••{acct.accountNumberLast4}</Text>
-                              )}
-                            </Space>
-                          ),
-                        },
-                        {
-                          title: 'Value', align: 'right', width: 110,
-                          render: (_, acct) => {
-                            const acctRows = rangeFiltered.filter(r => r.accountId === acct.id);
-                            const v = acctRows.at(-1)?.value;
-                            return <Text style={{ color: '#fff', fontSize: 13 }}>{v !== undefined ? formatCurrency(v, { decimals: 0 }) : '—'}</Text>;
+                    {isMobile ? (
+                      <div style={{ marginTop: 10 }}>
+                        {instAccts.map((acct, i) => {
+                          const acctRows = rangeFiltered.filter(r => r.accountId === acct.id);
+                          const v = acctRows.at(-1)?.value;
+                          const hasReturn = acctRows.length >= 2 && acctRows[0].value;
+                          const pct = hasReturn ? ((acctRows.at(-1).value - acctRows[0].value) / acctRows[0].value) * 100 : null;
+                          return (
+                            <div key={acct.id}>
+                              {i > 0 && <Divider style={{ borderColor: brandColors.darkBorder, margin: '8px 0' }} />}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <div style={{ minWidth: 0 }}>
+                                  <Text style={{ color: '#fff', fontSize: 13, display: 'block' }}>{acct.name}</Text>
+                                  {acct.accountNumberLast4 && (
+                                    <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>••••{acct.accountNumberLast4}</Text>
+                                  )}
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <Text style={{ color: '#fff', fontSize: 13, display: 'block' }}>{v !== undefined ? formatCurrency(v, { decimals: 0 }) : '—'}</Text>
+                                  {pct !== null ? (
+                                    <ColoredValue value={pct} formatter={v2 => formatPercent(v2)} />
+                                  ) : (
+                                    <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>—</Text>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <Table
+                        dataSource={instAccts}
+                        rowKey="id"
+                        size="small"
+                        pagination={false}
+                        style={{ marginTop: 10 }}
+                        columns={[
+                          {
+                            title: 'Account', dataIndex: 'name',
+                            render: (name, acct) => (
+                              <Space orientation="vertical" size={0}>
+                                <Text style={{ color: '#fff', fontSize: 13 }}>{name}</Text>
+                                {acct.accountNumberLast4 && (
+                                  <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>••••{acct.accountNumberLast4}</Text>
+                                )}
+                              </Space>
+                            ),
                           },
-                        },
-                        {
-                          title: 'Return', align: 'right', width: 80,
-                          render: (_, acct) => {
-                            const acctRows = rangeFiltered.filter(r => r.accountId === acct.id);
-                            if (acctRows.length < 2 || !acctRows[0].value) return <Text style={{ color: brandColors.textMuted }}>—</Text>;
-                            const pct = ((acctRows.at(-1).value - acctRows[0].value) / acctRows[0].value) * 100;
-                            return <ColoredValue value={pct} formatter={v => formatPercent(v)} />;
+                          {
+                            title: 'Value', align: 'right', width: 110,
+                            render: (_, acct) => {
+                              const acctRows = rangeFiltered.filter(r => r.accountId === acct.id);
+                              const v = acctRows.at(-1)?.value;
+                              return <Text style={{ color: '#fff', fontSize: 13 }}>{v !== undefined ? formatCurrency(v, { decimals: 0 }) : '—'}</Text>;
+                            },
                           },
-                        },
-                      ]}
-                    />
+                          {
+                            title: 'Return', align: 'right', width: 80,
+                            render: (_, acct) => {
+                              const acctRows = rangeFiltered.filter(r => r.accountId === acct.id);
+                              if (acctRows.length < 2 || !acctRows[0].value) return <Text style={{ color: brandColors.textMuted }}>—</Text>;
+                              const pct = ((acctRows.at(-1).value - acctRows[0].value) / acctRows[0].value) * 100;
+                              return <ColoredValue value={pct} formatter={v => formatPercent(v)} />;
+                            },
+                          },
+                        ]}
+                      />
+                    )}
                   </div>
                 ),
               };
@@ -1009,7 +1043,7 @@ const ChartTooltip = ({ active, payload, label, formatter }) => {
   );
 };
 
-const AnalyticsView = ({ accounts, positions }) => {
+const AnalyticsView = ({ accounts, positions, isMobile }) => {
   // ---- Derive institution data from accounts --------------------------------
   const institutionMap = {};
   accounts.forEach(a => {
@@ -1061,17 +1095,19 @@ const AnalyticsView = ({ accounts, positions }) => {
   const cardStyle = { borderColor: brandColors.darkBorder, marginBottom: 20 };
   const titleStyle = { color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 16 };
 
-  // Custom donut label
+  // Custom donut label — full "Name (pct%)" on desktop; percent-only on mobile
+  // to avoid long institution/account names overflowing past the narrow SVG's
+  // left edge (where they get silently clipped). Full name is always in the legend below.
   const renderPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }) => {
     if (percent < 0.05) return null;
     const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 28;
+    const radius = outerRadius + (isMobile ? 16 : 28);
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
     return (
       <text x={x} y={y} fill={brandColors.textSecondary} textAnchor={x > cx ? 'start' : 'end'}
         dominantBaseline="central" fontSize={11}>
-        {name} ({(percent * 100).toFixed(0)}%)
+        {isMobile ? `${(percent * 100).toFixed(0)}%` : `${name} (${(percent * 100).toFixed(0)}%)`}
       </text>
     );
   };
@@ -1540,7 +1576,7 @@ const Dashboard = () => {
       {
         key: 'analytics',
         label: 'Analytics',
-        children: <AnalyticsView accounts={accounts} positions={positions} />,
+        children: <AnalyticsView accounts={accounts} positions={positions} isMobile={isMobile} />,
       },
       ...shares.map(share => ({
         key: share.owner_user_id,
@@ -1600,7 +1636,7 @@ const Dashboard = () => {
           {
             key: 'analytics',
             label: 'Analytics',
-            children: <AnalyticsView accounts={accounts} positions={positions} />,
+            children: <AnalyticsView accounts={accounts} positions={positions} isMobile={isMobile} />,
           },
         ]}
       />

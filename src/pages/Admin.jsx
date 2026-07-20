@@ -265,6 +265,8 @@ const ImporterManagement = () => {
   const [editing, setEditing]           = useState(null);
   const [editForm]                      = Form.useForm();
   const [registerForm]                  = Form.useForm();
+  const screens                         = Grid.useBreakpoint();
+  const isMobile                        = !screens.md;
   const message = useMessage();
 
   const reload = async () => {
@@ -390,15 +392,39 @@ const ImporterManagement = () => {
           Register Importer
         </Button>
       </div>
-      <Table
-        dataSource={importers}
-        columns={columns}
-        rowKey="id"
-        size="small"
-        pagination={false}
-        loading={loading}
-        scroll={{ x: 600 }}
-      />
+      {isMobile ? (
+        <div>
+          {importers.map((r, i) => (
+            <div key={r.id}>
+              {i > 0 && <Divider style={{ borderColor: brandColors.darkBorder, margin: '12px 0' }} />}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ color: '#fff', fontWeight: 600, display: 'block' }}>{r.name}</Text>
+                  <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block' }}>{r.id}</Text>
+                  {!r.hasModule && <Tag color="error" style={{ marginTop: 4, fontSize: 11 }}>No code module</Tag>}
+                  <Space size={6} style={{ marginTop: 8, flexWrap: 'wrap' }}>
+                    {r.file_types?.length > 0 && r.file_types.map(t => <Tag key={t} color="blue">{t}</Tag>)}
+                    {r.is_default && <Tag color="gold">Default</Tag>}
+                    <Tag color={r.is_active ? 'success' : 'default'}>{r.is_active ? 'Active' : 'Inactive'}</Tag>
+                    <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>Order {r.display_order}</Text>
+                  </Space>
+                </div>
+                <Button size="small" onClick={() => handleEdit(r)} style={{ flexShrink: 0 }}>Edit</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <Table
+          dataSource={importers}
+          columns={columns}
+          rowKey="id"
+          size="small"
+          pagination={false}
+          loading={loading}
+          scroll={{ x: 600 }}
+        />
+      )}
 
       {/* Edit Modal */}
       <Modal
@@ -832,6 +858,39 @@ const Admin = () => {
       >
         {requests.length === 0 ? (
           <Text style={{ color: brandColors.textMuted }}>No role requests</Text>
+        ) : isMobile ? (
+          <div>
+            {requests.map((r, i) => (
+              <div key={r.id}>
+                {i > 0 && <Divider style={{ borderColor: brandColors.darkBorder, margin: '12px 0' }} />}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ color: '#fff', fontWeight: 600, display: 'block' }}>{r.display_name}</Text>
+                    <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block', wordBreak: 'break-all' }}>{r.email}</Text>
+                    <Space size={6} style={{ marginTop: 8, flexWrap: 'wrap' }}>
+                      <RoleBadge role={r.current_role} />
+                      <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>→</Text>
+                      <RoleBadge role={r.requested_role} />
+                      <Tag color={{ pending: 'warning', approved: 'success', denied: 'error' }[r.status]}>{r.status}</Tag>
+                    </Space>
+                    {r.message && (
+                      <Text style={{ color: brandColors.textSecondary, fontSize: 12, display: 'block', marginTop: 6 }}>{r.message}</Text>
+                    )}
+                  </div>
+                  {r.status === 'pending' && (
+                    <Space size={8} style={{ flexShrink: 0 }}>
+                      <Button type="primary" size="small" icon={<CheckOutlined />} onClick={() => handleReview(r.id, 'approve')} style={{ fontWeight: 600 }}>
+                        Approve
+                      </Button>
+                      <Button danger size="small" icon={<CloseOutlined />} onClick={() => handleReview(r.id, 'deny')}>
+                        Deny
+                      </Button>
+                    </Space>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <Table
             dataSource={requests}

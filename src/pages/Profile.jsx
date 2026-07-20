@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Typography, Card, Form, Input, Button, Space,
   Divider, Tag, Alert, Modal, Table, Popconfirm, Switch,
-  Select, Radio, Checkbox, Collapse, Spin, Avatar,
+  Select, Radio, Checkbox, Collapse, Spin, Avatar, Grid,
 } from 'antd';
 import {
   UserOutlined, ShareAltOutlined, CrownOutlined,
@@ -20,6 +20,7 @@ import useMessage from '../hooks/useMessage';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 // =============================================================================
 // Profile / Settings Page
@@ -46,6 +47,8 @@ const SharingSection = () => {
   const [form]                              = Form.useForm();
   const [sharing, setSharing]               = useState(false);
   const [refreshKey, setRefreshKey]         = useState(0);
+  const screens                             = useBreakpoint();
+  const isMobile                            = !screens.md;
   const message = useMessage();
 
   useEffect(() => {
@@ -170,6 +173,34 @@ const SharingSection = () => {
         <Text style={{ color: brandColors.textMuted }}>
           You haven't shared your portfolio with anyone yet.
         </Text>
+      ) : isMobile ? (
+        <div>
+          {shares.owned.map((s, i) => (
+            <div key={s.id}>
+              {i > 0 && <Divider style={{ borderColor: brandColors.darkBorder, margin: '12px 0' }} />}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ color: '#fff', fontWeight: 600, display: 'block' }}>{s.viewer_name}</Text>
+                  {s.label && (
+                    <Text style={{ color: brandColors.textSecondary, fontSize: 12, display: 'block' }}>{s.label}</Text>
+                  )}
+                  <Text style={{ color: brandColors.textMuted, fontSize: 12, display: 'block', marginTop: 4 }}>
+                    Since {formatDateTime(s.created_at)}
+                  </Text>
+                </div>
+                <Popconfirm
+                  title="Remove this share?"
+                  description="This person will no longer be able to view your portfolio."
+                  onConfirm={() => handleRemoveShare(s.id)}
+                  okText="Remove"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button type="text" icon={<DeleteOutlined />} size="small" danger />
+                </Popconfirm>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <Table
           dataSource={shares.owned}
