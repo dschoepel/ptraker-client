@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Table, Button, Input, Typography, Tag, Space,
+  Table, Button, Input, Typography, Tag, Space, Card, Grid,
   Popconfirm, Alert, Spin, Modal, Form, Tooltip, AutoComplete,
 } from 'antd';
 import {
@@ -15,6 +15,7 @@ import { brandColors } from '../theme';
 import api from '../services/api';
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 const formatDollarChange = (value) => {
   if (value === null || value === undefined) return '—';
@@ -25,7 +26,7 @@ const formatDollarChange = (value) => {
 // =============================================================================
 // Sparkline — mini price chart for the last 30 days
 // =============================================================================
-const Sparkline = ({ ticker }) => {
+const Sparkline = ({ ticker, width = 120 }) => {
   const [data, setData]       = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +47,7 @@ const Sparkline = ({ ticker }) => {
   }, [ticker]);
 
   if (loading) return (
-    <div style={{ width: 120, height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: typeof width === 'number' ? width : '100%', height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Spin size="small" />
     </div>
   );
@@ -62,7 +63,7 @@ const Sparkline = ({ ticker }) => {
   const padding = (max - min) * 0.3 || max * 0.01;
 
   return (
-    <ResponsiveContainer width={120} height={50}>
+    <ResponsiveContainer width={width} height={50}>
       <AreaChart data={data}>
         <defs>
           <linearGradient id={`grad-${ticker}`} x1="0" y1="0" x2="0" y2="1">
@@ -111,6 +112,68 @@ const GainLossIndicator = ({ value }) => {
   if (value < 0) return <ArrowDownOutlined style={{ color: brandColors.loss }} />;
   return <MinusOutlined style={{ color: brandColors.neutral }} />;
 };
+
+const MobileWatchlistCard = ({ item, showDollar, onToggleShowDollar, onEdit, onRemove }) => (
+  <Card size="small" style={{ marginBottom: 12 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+      <Space orientation="vertical" size={0}>
+        <Text style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{item.ticker}</Text>
+        {item.asset_name && (
+          <Text style={{ color: brandColors.textMuted, fontSize: 11 }}>{item.asset_name}</Text>
+        )}
+      </Space>
+      {item.current_price ? (
+        <Space orientation="vertical" size={0} style={{ textAlign: 'right' }}>
+          <Text style={{ color: '#fff', fontWeight: 600 }}>{formatCurrency(item.current_price)}</Text>
+          <Space size={4} style={{ cursor: 'pointer' }} onClick={onToggleShowDollar}>
+            <GainLossIndicator value={item.change_percent} />
+            <Text style={{ fontSize: 12, color: gainLossColor(item.change_percent) }}>
+              {showDollar ? formatDollarChange(item.change_amount) : formatPercent(item.change_percent)}
+            </Text>
+          </Space>
+        </Space>
+      ) : (
+        <Text style={{ color: brandColors.textMuted }}>—</Text>
+      )}
+    </div>
+
+    <div style={{ marginTop: 8 }}>
+      <Sparkline ticker={item.ticker} width="100%" />
+    </div>
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+      <Space orientation="vertical" size={0}>
+        <Space size={6}>
+          <Text style={{ color: brandColors.textSecondary, fontSize: 12 }}>
+            {new Date(item.added_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </Text>
+          {item.added_from === 'import_sync' && (
+            <Tag color="default" style={{ fontSize: 10 }}>from import</Tag>
+          )}
+        </Space>
+        {item.notes && (
+          <Text style={{ color: brandColors.textMuted, fontSize: 13 }}>{item.notes}</Text>
+        )}
+      </Space>
+      <Space size={4}>
+        <Tooltip title="Edit notes">
+          <Button type="text" icon={<EditOutlined />} size="small" style={{ color: brandColors.textSecondary }} onClick={onEdit} />
+        </Tooltip>
+        <Tooltip title="Remove">
+          <Popconfirm
+            title={`Remove ${item.ticker} from watchlist?`}
+            onConfirm={onRemove}
+            okText="Remove"
+            cancelText="Cancel"
+            okButtonProps={{ danger: true }}
+          >
+            <Button type="text" icon={<DeleteOutlined />} size="small" danger />
+          </Popconfirm>
+        </Tooltip>
+      </Space>
+    </div>
+  </Card>
+);
 
 const AddTickerModal = ({ open, onClose, onAdd, loading }) => {
   const [form] = Form.useForm();
@@ -245,6 +308,8 @@ const Watchlist = () => {
   const [saving, setSaving]             = useState(false);
   const [refreshKey, setRefreshKey]     = useState(0);
   const [showDollar, setShowDollar]     = useState(false);
+  const screens                         = useBreakpoint();
+  const isMobile                        = !screens.md;
   const message = useMessage();
 
   useEffect(() => {
@@ -468,7 +533,7 @@ const Watchlist = () => {
           onClick={() => setAddModalOpen(true)}
           style={{ fontWeight: 600 }}
         >
-          Add Ticker
+          {isMobile ? 'Add' : 'Add Ticker'}
         </Button>
       </div>
 
@@ -482,6 +547,19 @@ const Watchlist = () => {
           <Text style={{ fontSize: 13, color: brandColors.textMuted }}>
             Add tickers manually or they'll appear automatically when you sync-delete positions during import
           </Text>
+        </div>
+      ) : isMobile ? (
+        <div>
+          {watchlist.map(item => (
+            <MobileWatchlistCard
+              key={item.id}
+              item={item}
+              showDollar={showDollar}
+              onToggleShowDollar={() => setShowDollar(d => !d)}
+              onEdit={() => setEditItem(item)}
+              onRemove={() => handleRemove(item.ticker)}
+            />
+          ))}
         </div>
       ) : (
         <Table
