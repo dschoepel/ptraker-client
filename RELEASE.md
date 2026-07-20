@@ -1,3 +1,35 @@
+# Release Notes — v1.8.3
+
+**Date:** 2026-07-20
+**Type:** Minor — PWA update flow, pull-to-refresh, visible mobile version
+
+## Summary
+
+Previously an already-open PWA never picked up a newly deployed version until
+fully closed and reopened, and the version number was invisible on mobile
+(only rendered in the desktop layout's footer). This release adds:
+
+- Manual service-worker registration so the app can detect and act on
+  updates, instead of the plugin's default silent registration
+- A background "Update available" notification (polls every 5 min + on tab
+  focus) with a Refresh button
+- A hand-rolled pull-to-refresh gesture on mobile, plus a standalone-mode
+  fallback refresh button as a discoverability backstop
+- A persistent `v{version}` in the mobile header
+- `nginx.conf`: `sw.js`/`registerSW.js`/`manifest.webmanifest`/`index.html`
+  now serve `Cache-Control: no-cache` ahead of the general 1-year-immutable
+  asset rule — without this the browser would never notice a new version
+  was deployed, regardless of the client-side changes above
+
+## Deployment
+
+```bash
+git tag v1.8.3
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.8.2
 
 **Date:** 2026-07-20

@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.8.3] — 2026-07-20
+
+### Added
+- **PWA update flow**: an already-open app now detects a newly deployed version (polls every 5 min + on tab focus) and shows an "Update available" notification with a Refresh button, instead of requiring a full close-and-reopen.
+- **Pull-to-refresh**: hand-rolled touch gesture on mobile — pull down and hold past a 100px threshold to refresh; also applies any pending update. Guards against firing while an AntD Modal is open.
+- **Standalone-mode fallback refresh button** in the mobile header, for discoverability of the above.
+- **Mobile header version number**: `v{version}` is now always visible in the mobile header — previously the version was only rendered in the desktop layout's footer and never shown on mobile/PWA standalone mode at all.
+
+### Fixed
+- `nginx.conf`: `sw.js`, `registerSW.js`, `manifest.webmanifest`, and `index.html` now serve `Cache-Control: no-cache`, ahead of the general 1-year-immutable static-asset rule. Without this, the browser would never notice a new version was deployed regardless of any client-side update-detection code.
+
+---
+
 ## [1.8.2] — 2026-07-20
 
 ### Fixed
