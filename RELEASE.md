@@ -1,3 +1,27 @@
+# Release Notes — v1.8.1
+
+**Date:** 2026-07-20
+**Type:** Patch — watchlist mobile layout fix
+
+## Summary
+
+Fixes clipped columns on the Watchlist page when viewed on narrow phone
+screens in portrait orientation. The Table's fixed-width columns (Ticker,
+30d sparkline, Price, Added, Notes, Actions — ~620px minimum) overflowed
+the viewport and cut off Price/Added/Notes/Actions. Below the `md`
+breakpoint, Watchlist now renders a stacked card list (`MobileWatchlistCard`)
+instead of the Table, matching the existing mobile pattern already used on
+Accounts and Dashboard. Desktop table view is unchanged. No API change.
+
+## Deployment
+
+```bash
+git tag v1.8.1
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.8.0
 
 **Date:** 2026-07-07

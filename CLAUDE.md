@@ -129,8 +129,10 @@ if (hash) {
 ## Mobile / Responsive
 - `isMobile = !screens.md` (from `Grid.useBreakpoint()`)
 - Accounts page: card list on mobile, table on desktop
+- Watchlist page: card list (`MobileWatchlistCard`) on mobile, table on desktop — same pattern as Accounts. Fixed-width Table columns clip on narrow viewports, so any new data-table page should default to this pattern rather than relying on horizontal scroll.
 - Dashboard: card layout adapts, filter panel collapses
 - Header rows: use `flexWrap: 'wrap'` and `gap` for mobile wrapping
+- Recharts components sized for a fixed-width table cell (e.g. `Sparkline`) should accept a `width` prop so they can be reused at `width="100%"` inside a mobile card
 
 ## Dashboard Architecture
 - `SummaryCards` — net worth, cost basis, gain/loss, gain % stats

@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.8.1] — 2026-07-20
+
+### Fixed
+- **Watchlist mobile layout**: the watchlist Table's fixed-width columns (~620px minimum) overflowed and clipped Price/Added/Notes/Actions on narrow phone viewports. Below the `md` breakpoint, the watchlist now renders a stacked `MobileWatchlistCard` list instead of the `Table`, matching the existing card-list pattern used by Accounts/Dashboard on mobile. Desktop table view is unchanged.
+
+---
+
 ## [1.8.0] — 2026-07-07
 
 ### Added
