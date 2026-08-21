@@ -4,12 +4,12 @@ import {
   Popconfirm, Alert, Spin, Modal, Form, Tooltip, AutoComplete,
 } from 'antd';
 import {
-  PlusOutlined, DeleteOutlined, EditOutlined,
+  PlusOutlined, DeleteOutlined, EditOutlined, ReloadOutlined,
   ArrowUpOutlined, ArrowDownOutlined, MinusOutlined
 } from '@ant-design/icons';
 import { AreaChart, Area, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { watchlistService } from '../services/dashboard.service';
-import { formatCurrency, formatPercent, gainLossColor } from '../utils/formatters';
+import { watchlistService, priceService } from '../services/dashboard.service';
+import { formatCurrency, formatPercent, gainLossColor, formatDateTime } from '../utils/formatters';
 import useMessage from '../hooks/useMessage';
 import { brandColors } from '../theme';
 import api from '../services/api';
@@ -308,6 +308,7 @@ const Watchlist = () => {
   const [saving, setSaving]             = useState(false);
   const [refreshKey, setRefreshKey]     = useState(0);
   const [showDollar, setShowDollar]     = useState(false);
+  const [refreshing, setRefreshing]     = useState(false);
   const screens                         = useBreakpoint();
   const isMobile                        = !screens.md;
   const message = useMessage();
@@ -366,6 +367,23 @@ const Watchlist = () => {
       setRefreshKey(k => k + 1);
     } catch {
       message.error('Failed to remove ticker');
+    }
+  };
+
+  const handleRefreshPrices = async () => {
+    setRefreshing(true);
+    try {
+      const tickers = watchlist.map(w => w.ticker).filter(t => t !== 'CASH');
+      if (tickers.length > 0) {
+        await priceService.refreshTickers(tickers);
+      }
+      const data = await watchlistService.getAll();
+      setWatchlist(data.watchlist || []);
+      message.success('Prices updated');
+    } catch {
+      message.error('Price refresh failed');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -507,12 +525,20 @@ const Watchlist = () => {
     );
   }
 
+  const newestPriceAt = watchlist.reduce((max, item) => {
+    if (!item.price_as_of) return max;
+    const t = new Date(item.price_as_of).getTime();
+    return t > max ? t : max;
+  }, 0) || null;
+
   return (
     <div>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 8,
         marginBottom: 20,
         position: 'sticky',
         top: 0,
@@ -527,14 +553,30 @@ const Watchlist = () => {
             ({watchlist.length} {watchlist.length === 1 ? 'ticker' : 'tickers'})
           </Text>
         </Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setAddModalOpen(true)}
-          style={{ fontWeight: 600 }}
-        >
-          {isMobile ? 'Add' : 'Add Ticker'}
-        </Button>
+        <Space wrap size={8}>
+          {newestPriceAt && (
+            <Text style={{ color: brandColors.textMuted, fontSize: 12 }}>
+              Prices as of {formatDateTime(newestPriceAt)}
+            </Text>
+          )}
+          <Button
+            type="text"
+            icon={<ReloadOutlined spin={refreshing} />}
+            loading={refreshing}
+            onClick={handleRefreshPrices}
+            style={{ color: brandColors.textSecondary }}
+          >
+            {isMobile ? '' : 'Refresh Prices'}
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setAddModalOpen(true)}
+            style={{ fontWeight: 600 }}
+          >
+            {isMobile ? 'Add' : 'Add Ticker'}
+          </Button>
+        </Space>
       </div>
 
       {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} closable />}

@@ -95,6 +95,11 @@ export const priceService = {
     const response = await api.post('/prices/refresh');
     return response.data;
   },
+
+  refreshTickers: async (tickers) => {
+    const response = await api.post('/prices/refresh/tickers', { tickers });
+    return response.data;
+  },
 };
 
 export const analyticsService = {

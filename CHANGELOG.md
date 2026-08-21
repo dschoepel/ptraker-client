@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.9.0] — 2026-08-20
+
+### Added
+- **Watchlist page**: "Refresh Prices" button + "Prices as of {date}" label in the sticky header, matching the Dashboard My Portfolio tab's pattern. Refresh is scoped to just the watchlist's own tickers (`POST /prices/refresh/tickers`) rather than the full portfolio refresh, and re-fetches the list on completion without a full-page loading flash. Collapses to icon-only on mobile.
+- `priceService.refreshTickers(tickers)` in `dashboard.service.js`, wrapping the existing `POST /prices/refresh/tickers` endpoint.
+
+---
+
 ## [1.8.3] — 2026-07-20
 
 ### Added

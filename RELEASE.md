@@ -1,3 +1,31 @@
+# Release Notes — v1.9.0
+
+**Date:** 2026-08-20
+**Type:** Minor — Watchlist price refresh
+
+## Summary
+
+Adds the same "Refresh Prices" button and "Prices as of {date}" label from
+the Dashboard's My Portfolio tab to the Watchlist page. Clicking it refreshes
+only the tickers currently on the watchlist (via the existing
+`POST /prices/refresh/tickers` endpoint) rather than a full portfolio
+refresh, then re-fetches the list — no full-page loading flash. Collapses to
+icon-only on mobile to keep the sticky header from wrapping awkwardly.
+
+Pairs with ptraker-api v1.9.0, which adds an intraday auto-refresh cron job
+(9:30am–3:30pm ET, hourly on the half-hour) and fixes price refresh to also
+cover watchlist-only tickers, so this button's data — and the Dashboard's —
+stays fresher throughout the trading day even without clicking it.
+
+## Deployment
+
+```bash
+git tag v1.9.0
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.8.3
 
 **Date:** 2026-07-20
