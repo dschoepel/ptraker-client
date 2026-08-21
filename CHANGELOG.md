@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.9.1] — 2026-08-20
+
+### Fixed
+- `npm ci` failed in the Docker build (`lock file's react@19.2.7 does not satisfy react@19.2.8`) because `package-lock.json` had drifted out of sync with what's published for `react`/`react-dom` under the `^19.2.6` range — pre-existing drift, reproduced even against the v1.8.3 tag, unrelated to the v1.9.0 feature changes. Regenerated the lockfile (`react`/`react-dom` 19.2.7 → 19.2.8) and verified a clean `npm ci` + build.
+
+---
+
 ## [1.9.0] — 2026-08-20
 
 ### Added

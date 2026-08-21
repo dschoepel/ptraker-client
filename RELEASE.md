@@ -1,3 +1,27 @@
+# Release Notes — v1.9.1
+
+**Date:** 2026-08-20
+**Type:** Patch — CI build fix
+
+## Summary
+
+v1.9.0's Docker build failed at `npm ci` with
+`lock file's react@19.2.7 does not satisfy react@19.2.8` — `package-lock.json`
+had drifted out of sync with what's currently published for `react`/
+`react-dom` under the existing `^19.2.6` range in `package.json`. Confirmed
+this predates the v1.9.0 changes (reproduces against the v1.8.3 tag too), not
+something introduced by this release. Regenerated the lockfile and verified
+a clean `npm ci` and production build. No application code changed.
+
+## Deployment
+
+```bash
+git tag v1.9.1
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.9.0
 
 **Date:** 2026-08-20
