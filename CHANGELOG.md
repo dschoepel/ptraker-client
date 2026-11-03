@@ -8,8 +8,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ## [1.9.4] — 2026-11-03
 
 ### Changed
-- Neutral example placeholders on Accounts, Admin (notification settings), Profile (sharing) and Import (manual entry) instead of real names, emails and holdings.
-- `.env` is no longer tracked (now gitignored); `CLAUDE.md` environment section uses placeholders. This repo is public.
+- Updated example placeholder text on the Accounts, Admin, Profile and Import forms.
+- Housekeeping: `.gitignore` and documentation updates.
 
 ---
 
