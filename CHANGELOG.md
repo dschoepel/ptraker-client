@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.9.3] — 2026-11-03
+
+### Changed
+- Version bump only, no functional changes — kept in sync with ptraker-api v1.9.3 (price refresh skips manually priced tickers).
+
+---
+
 ## [1.9.2] — 2026-11-03
 
 ### Fixed

@@ -1,3 +1,22 @@
+# Release Notes — v1.9.3
+
+**Date:** 2026-11-03
+**Type:** Patch — version sync only
+
+## Summary
+
+No functional changes. Version bump to stay in sync with ptraker-api
+v1.9.3, where the price refresh now skips manually priced tickers.
+
+## Deployment
+
+```bash
+git tag v1.9.3
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.9.2
 
 **Date:** 2026-11-03
