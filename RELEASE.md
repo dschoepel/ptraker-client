@@ -1,3 +1,29 @@
+# Release Notes — v1.9.2
+
+**Date:** 2026-11-03
+**Type:** Patch — lockfile fix + version sync
+
+## Summary
+
+No application code changed. `package-lock.json` had drifted again
+(`npm ci`: `lock file's react@19.2.8 does not satisfy react@19.3.1`, already
+failing at the v1.9.1 tag), which would break the Docker build. Regenerated
+the lockfile — `react`/`react-dom` 19.2.8 → 19.3.1 — and verified a clean
+`npm ci` and production build.
+
+Version kept in sync with ptraker-api v1.9.2, which fixes the LPL CSV
+importer after LPL changed its export column layout, and upgrades
+yahoo-finance2 to 4.0.5.
+
+## Deployment
+
+```bash
+git tag v1.9.2
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.9.1
 
 **Date:** 2026-08-20

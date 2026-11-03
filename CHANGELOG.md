@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.9.2] — 2026-11-03
+
+### Fixed
+- `npm ci` failed again with `lock file's react@19.2.8 does not satisfy react@19.3.1` (same drift as v1.9.1, pre-existing at the v1.9.1 tag). Regenerated `package-lock.json` (`react`/`react-dom` 19.2.8 → 19.3.1, `scheduler` 0.27.0 → 0.28.0) and verified a clean `npm ci` + build.
+
+### Changed
+- Kept in sync with ptraker-api v1.9.2 (LPL CSV import fix + yahoo-finance2 4.0.5). No application code changed.
+
+---
+
 ## [1.9.1] — 2026-08-20
 
 ### Fixed
