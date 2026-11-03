@@ -27,3 +27,7 @@ playwright-report/
 *.njsproj
 *.sln
 *.sw?
+
+# Private Claude Code notes (environment details — never commit)
+CLAUDE.local.md
+.env

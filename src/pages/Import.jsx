@@ -515,7 +515,7 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
               {isPrivate ? (
                 <Input
                   size="large"
-                  placeholder="e.g. BNDLBNC"
+                  placeholder="e.g. PRIVCO"
                   style={{ textTransform: 'uppercase' }}
                 />
               ) : (
@@ -534,7 +534,7 @@ const StepManualEntry = ({ accounts, onBack, onSave, saving }) => {
 
             {isPrivate && (
               <Form.Item name="assetName" label="Company Name (optional)">
-                <Input size="large" placeholder="e.g. Bonduel Bancorp, Inc." />
+                <Input size="large" placeholder="e.g. Private Company, Inc." />
               </Form.Item>
             )}
 

@@ -305,7 +305,7 @@ const SharingSection = () => {
                 </Text>
               }
             >
-              <Input placeholder="april@example.com" size="large" autoFocus />
+              <Input placeholder="viewer@example.com" size="large" autoFocus />
             </Form.Item>
           )}
 
@@ -314,7 +314,7 @@ const SharingSection = () => {
             name="label"
             label={<span style={{ color: brandColors.textSecondary }}>Label (optional)</span>}
           >
-            <Input placeholder="e.g. April viewing Dave's portfolio" />
+            <Input placeholder="e.g. Family member viewing my portfolio" />
           </Form.Item>
         </Form>
       </Modal>

@@ -182,7 +182,7 @@ const NotificationSettings = () => {
                 <Switch checkedChildren="Enabled" unCheckedChildren="Disabled" />
               </Form.Item>
               <Form.Item name="url" label="Ntfy URL">
-                <Input placeholder="https://ntfy.schoepels.com" />
+                <Input placeholder="https://ntfy.example.com" />
               </Form.Item>
               <Form.Item name="topic" label="Topic">
                 <Input placeholder="ptraker-alerts" />
@@ -231,7 +231,7 @@ const NotificationSettings = () => {
                   </Text>
                 }
               >
-                <Input placeholder="dave@theschoepels.com" />
+                <Input placeholder="you@example.com" />
               </Form.Item>
               <Space>
                 <Button type="primary" onClick={handleSaveEmail} loading={saving} style={{ fontWeight: 600 }}>

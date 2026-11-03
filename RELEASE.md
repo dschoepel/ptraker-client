@@ -1,3 +1,24 @@
+# Release Notes — v1.9.4
+
+**Date:** 2026-11-03
+**Type:** Patch — public-repo cleanup
+
+## Summary
+
+Removes environment-specific details from this public repo: form
+placeholders now use neutral examples, `.env` is untracked and gitignored,
+and `CLAUDE.md` uses placeholders for environment values. No behaviour
+changes. Kept in sync with ptraker-api v1.9.4.
+
+## Deployment
+
+```bash
+git tag v1.9.4
+git push origin main --tags
+```
+
+---
+
 # Release Notes — v1.9.3
 
 **Date:** 2026-11-03

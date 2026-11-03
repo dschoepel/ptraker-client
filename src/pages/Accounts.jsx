@@ -265,7 +265,7 @@ const AccountFormModal = ({ open, onClose, onSave, initialValues, loading }) => 
       <Form form={form} layout="vertical" requiredMark={false} style={{ marginTop: 16 }}>
         <Form.Item name="name" label="Account Name"
           rules={[{ required: true, message: 'Account name is required' }]}>
-          <Input placeholder="e.g. Dave's Roth IRA" />
+          <Input placeholder="e.g. My Roth IRA" />
         </Form.Item>
         <Form.Item name="institution" label="Institution"
           rules={[{ required: true, message: 'Institution is required' }]}>
